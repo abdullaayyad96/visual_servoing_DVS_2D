@@ -1,0 +1,11 @@
+# Request
+
+# Set start: 0 and stop: 1
+int32 event_capture_command
+
+
+---
+# Response
+
+# Return status (1 = ok)
+int32 status
