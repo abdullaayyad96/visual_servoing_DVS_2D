@@ -25,7 +25,7 @@
 #include <cstdio>
 #include <ros/ros.h>
 #include <dvs_msgs/EventArray.h>
-//#include <dvs_msgs/Event.h>
+
 #include <deque>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Core>
@@ -59,8 +59,6 @@
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/Image.h>
 #include <ros/console.h>
-// Gripper
-//#include <electric_gripper_baxter.h>
 
 
 #include <stddef.h>
@@ -85,9 +83,10 @@ public:
 
 
 // callback and functions
-	void Davis_feature_Callback(const dvs_msgs::EventArray::ConstPtr &msg);
+	void davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg);
 	void tracking_mode_callback(const std_msgs::Bool &msg);
 	void detection_mode_callback(const std_msgs::Bool &msg);
+	void frame_image_callback(const sensor_msgs::Image::ConstPtr &msg);
 	void corner_detection();
 	void ee_orientation();
 	void ur_manipulation();
@@ -117,13 +116,7 @@ private:
 	typedef std::chrono::high_resolution_clock h_clock;
 	typedef std::chrono::duration<float, std::milli> duration;
   	h_clock::time_point  start = h_clock::now();
-	utils::time::Timer<std::chrono::nanoseconds> timero;
 	  
-  	double elaspedTimeMs=0;
-  	double elaspedTimeMst;
-  	double elaspedTimeGrip=0;
-
-  	geometry_msgs::WrenchStamped FT_Biased;
 
   	dvs_msgs::Event C_e, E_e, C_c, temp_e;
 
@@ -149,6 +142,7 @@ private:
     cv::Mat dilated_heatmap = cv::Mat(180, 240, CV_8UC1);
 	cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
     cv::Mat processed_heatmap = cv::Mat::zeros(180, 240, CV_8UC1);
+	cv::Mat frame;
 	
 	double heatmap_thresh = 0.6;
     cv::Mat upper_thresh_map = cv::Mat(180, 240, CV_8UC1);
@@ -191,6 +185,7 @@ private:
 	ros::Publisher noise_events_pub, edge_events_pub, corner_events_pub, event_frames_pub,complete_data, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_mode_pub; // Publish classified online events
 	ros::Subscriber davis_sub_; // Subscribe data from Davis
 	ros::Subscriber tracking_mode, detection_mode; // Subscribe data from Davis
+	ros::Subscriber frame_image_sub;
 	ros::NodeHandle pnh_;
 	// time and header
 	ros::Time st;
@@ -198,19 +193,16 @@ private:
 	
 	std_srvs::Empty empty_service;
 
-
-    // Counters
+	// Counters
 	int count_raw, count_flat, count_corner, count_edge, t_max_data_compare;
 
-    //defined parameters
-    int  frame_ms =1;
-    int  threshhold_edge=200;
-  	std::string condition ="10_HF_10_MF_10_V";
-  	std::string object ="Metal";
-  	std::string detector ="Harris";
-
-
-  	int control_edge_raw_max, control_corner_raw_max;
+	//parameters for Harris detector
+	int harris_th = 160;
+	int max_harris_th = 255;
+	int block_size_ = 2;
+	int aperture_size_ = 3;
+	cv::Mat harris_frame_;
+	double k_ = 0.04;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

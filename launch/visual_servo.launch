@@ -1,14 +1,6 @@
 <launch>
-  <!-- camera driver -->
-  
-  <node name="davis_ros_driver" pkg="davis_ros_driver" type="davis_ros_driver">
-    <rosparam command="load" file="$(find davis_ros_driver)/config/indoors.yaml" />
-  </node>
-
     <!-- feature detector -->
-  <node name="visual_servo_node" pkg="visual_servoing_davis" type="visual_servo_node" output="screen">
-
-
+  <node name="visual_servoing_node" pkg="visual_servoing_davis" type="visual_servoing_node" output="screen">
 
   </node> 
 
@@ -62,6 +54,12 @@
 
   <!-- display -->
   <node name="rqt_gui_corners" pkg="rqt_gui" type="rqt_gui" args="--perspective-file $(find visual_servoing_davis)/cfg/soft_exp.perspective" />
+  
+  <!-- camera driver -->  
+  <node name="davis_ros_driver" pkg="davis_ros_driver" type="davis_ros_driver">
+    <rosparam command="load" file="$(find davis_ros_driver)/config/ARIC_VS.yaml" />
+  </node>
+
 
 
 

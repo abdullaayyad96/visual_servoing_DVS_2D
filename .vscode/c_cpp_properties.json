@@ -12,7 +12,7 @@
                 "/home/abdulla/codes/ur_x/src/rpg_dvs_ros-update-use_libcaer3_with_davis346/dvs_calibration/include/**",
                 "/home/abdulla/codes/ur_x/src/rpg_dvs_ros-update-use_libcaer3_with_davis346/dvs_renderer/include/**",
                 "/home/abdulla/codes/ur_x/src/rpg_dvs_ros-update-use_libcaer3_with_davis346/dvs_ros_driver/include/**",
-                "/home/abdulla/codes/ur_x/src/slip_detection_davis/include/**",
+                "/home/abdulla/codes/ur_x/src/visual_servoing_davis/include/**",
                 "/usr/include/**"
             ],
             "name": "ROS",

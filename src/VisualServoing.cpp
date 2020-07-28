@@ -11,9 +11,10 @@ namespace visual_servoing_davis
 Visual_Servoing::Visual_Servoing() {
 
 	// Subscribers
-	davis_sub_ = pnh_.subscribe("/dvs/events", 0, &Visual_Servoing::Davis_feature_Callback, this);
+	davis_sub_ = pnh_.subscribe("/dvs/events", 0, &Visual_Servoing::davis_feature_callback, this);
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
+	//frame_image_sub = pnh_.subscribe("/dvs/image_raw", 0, &Visual_Servoing::frame_image_callback, this);
 
 	//Pubishers
 	centroid_pub = pnh_.advertise<dvs_msgs::EventArray>("/object_center", 1);
@@ -28,13 +29,12 @@ Visual_Servoing::Visual_Servoing() {
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
 
 	sae= Eigen::MatrixXd::Zero(sensor_width_,sensor_height_);
-
 }
 
 
 
 
-void Visual_Servoing::Davis_feature_Callback(const dvs_msgs::EventArray::ConstPtr &msg)
+void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg)
 {
 	// Packets definition
 	head_data= msg->header;
@@ -101,6 +101,29 @@ void Visual_Servoing::Davis_feature_Callback(const dvs_msgs::EventArray::ConstPt
 	packets_edge.events.clear();
 	packets_corner.events.clear();
 	packets_noise.events.clear();
+}
+
+
+void Visual_Servoing::frame_image_callback(const sensor_msgs::Image::ConstPtr &msg)
+{
+	this->img_bridge = *cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+	this->frame = this->img_bridge.image;
+	
+	cv::cornerHarris(this->frame, this->harris_frame_, this->block_size_, this->aperture_size_, this->k_);
+	cv::normalize(this->harris_frame_, this->harris_frame_, 0, 255, cv::NORM_MINMAX, CV_32FC1, cv::Mat());
+
+	for( int i = 0; i < this->harris_frame_.rows ; i++ )
+    {
+        for( int j = 0; j < this->harris_frame_.cols; j++ )
+        {
+            if( (int) this->harris_frame_.at<float>(i,j) > this->harris_th )
+            {
+				C_e.x = j;
+				C_e.y = i;
+				corner_queue.push(C_e);
+            }
+        }
+    }
 }
 
 

@@ -30,10 +30,6 @@ actionlib
 add_message_files(
    FILES
 )
- add_service_files(
-   FILES
-  object_test.srv
- )
 
 generate_messages(
    DEPENDENCIES
@@ -120,12 +116,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")## System dependencies a
 ## INCLUDE_DIRS: uncomment this if you package contains header files
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES multi_robot_system
-  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs message_generation rosconsole roscpp rospy sensor_msgs std_msgs tf control_msgs  cmake_modules )
-
+## DEPENDS: system dependencies of this project that dependenvisual_servoing_davis
 ###########
 ## Build ##
 ###########
@@ -154,17 +145,11 @@ include_directories(${actionlib_INCLUDE_DIRS})
 
 
 
-
-
-add_executable(visual_servo_node src/VisualServoing.cpp src/visual_servoing_node.cpp src/CornerDetectorHARRIS.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
+add_executable(visual_servoing_node src/visual_servoing_node.cpp src/VisualServoing.cpp src/CornerDetectorHARRIS.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
 add_executable(test_eigen src/eigen_test.cpp)
-target_link_libraries(visual_servo_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
+target_link_libraries(visual_servoing_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
 target_link_libraries(test_eigen ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
-add_dependencies(visual_servo_node ${catkin_LIBRARIES}  ${visual_servoing_davis})
-
-
-
-
+add_dependencies(visual_servoing_node ${catkin_LIBRARIES}  ${visual_servoing_davis})
 
 
 # Print some message showing some of them

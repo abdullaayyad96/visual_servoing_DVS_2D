@@ -28,7 +28,6 @@
 //#include "CornerDetectorARC.h"
 //#include "CornerDetectorFAST.h"
 #include "CornerDetectorHARRIS.h"
-#include <visual_servoing_davis/object_test.h>
 
 
 
