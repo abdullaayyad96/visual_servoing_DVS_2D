@@ -5,8 +5,8 @@
  *      Author: raj
  */
 
-#ifndef SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORARC_H_
-#define SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORARC_H_
+#ifndef VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORARC_H_
+#define VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORARC_H_
 
 #include <deque>
 #include <Eigen/Dense>
@@ -14,12 +14,11 @@
 #include <ros/ros.h>
 #include <dvs_msgs/EventArray.h>
 #include "davisdataprocessing.h"
-#include <softhandslipdetection.h>
 
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
-class CornerDetector_ARC : public soft_hand_slip_detection{
+class CornerDetector_ARC{
 public:
 	CornerDetector_ARC();
 	virtual ~CornerDetector_ARC();
@@ -41,6 +40,6 @@ private:
   // Surface of Active Events
   Eigen::MatrixXd sae_[2];
   Eigen::MatrixXd sae_latest_[2];
-};
+  };
 }
-#endif /* SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORARC_H_ */
+#endif /* VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORARC_H_ */

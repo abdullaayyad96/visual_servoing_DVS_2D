@@ -7,10 +7,8 @@
 
 #include "CornerDetectorHARRIS.h"
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
-//CornerDetector_HARRIS::CornerDetector_HARRIS( ros::NodeHandle* nodehandle ):pnh_(*nodehandle), soft_hand_slip_detection( nodehandle ){
-//CornerDetector_HARRIS::CornerDetector_HARRIS( ): soft_hand_slip_detection( ), CompressiveForceGrasp(){
 
 CornerDetector_HARRIS::CornerDetector_HARRIS( ):  Visual_Servoing(){
 //		  first_(-1), last_(-1), queue_max_(25){

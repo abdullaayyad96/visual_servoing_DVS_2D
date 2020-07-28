@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>visual_servoing</name>
+  <name>visual_servoing_davis</name>
   <version>0.0.0</version>
   <description>visual servoing DVS package</description>
 

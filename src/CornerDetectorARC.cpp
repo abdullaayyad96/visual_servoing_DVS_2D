@@ -8,10 +8,10 @@
 #include "CornerDetectorARC.h"
 #include <ros/ros.h>
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 
-CornerDetector_ARC::CornerDetector_ARC() : soft_hand_slip_detection(),
+CornerDetector_ARC::CornerDetector_ARC(),
 kSmallCircle_{{0, 3}, {1, 3}, {2, 2}, {3, 1},
           {3, 0}, {3, -1}, {2, -2}, {1, -3},
           {0, -3}, {-1, -3}, {-2, -2}, {-3, -1},

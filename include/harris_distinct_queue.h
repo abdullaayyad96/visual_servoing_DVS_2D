@@ -6,7 +6,7 @@
 #include "harris_local_event_queues.h"
 #include "harris_fixed_distinct_queue.h"
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 
 class HarrisDistinctQueue : public HarrisLocalEventQueues

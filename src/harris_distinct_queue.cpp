@@ -1,7 +1,7 @@
 #include "harris_distinct_queue.h"
 
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 
 HarrisDistinctQueue::HarrisDistinctQueue(int window_size, int queue_size, bool use_polarity) :

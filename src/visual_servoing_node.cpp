@@ -28,12 +28,12 @@
 //#include "CornerDetectorARC.h"
 //#include "CornerDetectorFAST.h"
 #include "CornerDetectorHARRIS.h"
-#include <slip_detection_davis/object_test.h>
+#include <visual_servoing_davis/object_test.h>
 
 
 
 
-static void Corner_tracking(slip_detection_davis::Visual_Servoing* data_ccollector)
+static void Corner_tracking(visual_servoing_davis::Visual_Servoing* data_ccollector)
 {
 	while (ros::ok())
 	{
@@ -43,7 +43,7 @@ static void Corner_tracking(slip_detection_davis::Visual_Servoing* data_ccollect
 }
 
 
-static void robot_EE_movement(slip_detection_davis::Visual_Servoing* data_ccollector)
+static void robot_EE_movement(visual_servoing_davis::Visual_Servoing* data_ccollector)
 {
 	while (ros::ok())
 	{
@@ -53,7 +53,7 @@ static void robot_EE_movement(slip_detection_davis::Visual_Servoing* data_ccolle
 	}
 }
 
-static void publish_whole_data(slip_detection_davis::Visual_Servoing* data_ccollector)
+static void publish_whole_data(visual_servoing_davis::Visual_Servoing* data_ccollector)
 {
 	while (ros::ok())
 	{
@@ -71,8 +71,8 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh_;
 
 
-	slip_detection_davis::Visual_Servoing* processs;
-	processs = new slip_detection_davis::CornerDetector_HARRIS;
+	visual_servoing_davis::Visual_Servoing* processs;
+	processs = new visual_servoing_davis::CornerDetector_HARRIS;
 
 
 	// Threads

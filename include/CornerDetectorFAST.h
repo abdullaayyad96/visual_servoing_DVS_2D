@@ -5,8 +5,8 @@
  *      Author: raj
  */
 
-#ifndef SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORFAST_H_
-#define SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORFAST_H_
+#ifndef VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORFAST_H_
+#define VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORFAST_H_
 #pragma once
 
 #include <deque>
@@ -17,9 +17,9 @@
 #include "davisdataprocessing.h"
 
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
-class CornerDetector_Fast : public soft_hand_slip_detection{
+class CornerDetector_Fast{
 public:
 	CornerDetector_Fast();
 	virtual ~CornerDetector_Fast();
@@ -45,4 +45,4 @@ private:
 };
 
 }
-#endif /* SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORFAST_H_ */
+#endif /* VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORFAST_H_ */

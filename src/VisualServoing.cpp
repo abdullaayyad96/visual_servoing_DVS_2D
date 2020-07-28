@@ -6,7 +6,7 @@
  */
 
 #include "VisualServoing.h"
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 Visual_Servoing::Visual_Servoing() {
 
@@ -26,11 +26,6 @@ Visual_Servoing::Visual_Servoing() {
 	cmd_vel_pub = pnh_.advertise<geometry_msgs::Twist>("/ur_cmd_vel", 1);
 	cmd_rotate_ee_pub = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee", 1);
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
-	//complete_data =pnh_.advertise<slip_detection_davis::SlipDetectionDataComplete_analysis_final3>("/slip_complete_data", 1);
-
-	//ROS service
-	goal_service = pnh_.advertiseService("grasp_command", &Visual_Servoing::ServiceCallback1, this);
-	sample_service = pnh_.advertiseService("sample_command", &Visual_Servoing::ServiceCallback2, this);
 
 	sae= Eigen::MatrixXd::Zero(sensor_width_,sensor_height_);
 
@@ -522,38 +517,6 @@ void Visual_Servoing::ee_orientation()
 		  this->corners_var[association] = (this->corners_var[association] * this->new_event_var) / (this->corners_var[association] + this->new_event_var);	  
 	  }
   }
-
-
-
-bool Visual_Servoing::ServiceCallback1(object_test::Request  &req,object_test::Response &res)
-{
-	if (req.event_capture_command ==0)
-	{	  
-		std::cout<<"Sampling_start Service 1" << std::endl;
-		res.status =1;
-	}
-	if (req.event_capture_command ==1)
-	{
-		std::cout<<"Sampling_stop Service 2" << std::endl;
-		res.status =1;
-	}
-	return true;
-}
-
-bool Visual_Servoing::ServiceCallback2(object_test::Request  &req,object_test::Response &res)
-{
-if (req.event_capture_command ==0)
-{
-	std::cout<<"Grasp_start Service 3" << std::endl;
-	res.status =1;
-}
-if (req.event_capture_command ==1)
-{
-	std::cout<<"Grasp_stop Service 4" << std::endl;
-	res.status =1;
-}
-  return true;
-}
 
 Visual_Servoing::~Visual_Servoing() {
 	// TODO Auto-generated destructor stub

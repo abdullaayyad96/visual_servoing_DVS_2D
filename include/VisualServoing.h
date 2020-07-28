@@ -5,8 +5,8 @@
  *      Author: user
  */
 
-#ifndef SLIP_DETECTION_DAVIS_SRC_VISUALSERVOING_H_
-#define SLIP_DETECTION_DAVIS_SRC_VISUALSERVOING_H_
+#ifndef VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_
+#define VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_
 
 
 
@@ -46,7 +46,6 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <sys/time.h>
-#include <slip_detection_davis/object_test.h>
 #include <queue>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/core/mat.hpp>
@@ -71,7 +70,7 @@
 
 
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 class Visual_Servoing {
 public:
@@ -104,10 +103,6 @@ public:
 	void corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window);
 	void corner_heatmap_time_update(double new_timestamp);
 
-	// ROS service
-	bool ServiceCallback1(object_test::Request  &req,object_test::Response &res);
-	bool ServiceCallback2(object_test::Request  &req,object_test::Response &res);
-
 	double th1= -0.001;//-0.0000001,
 	double th2= 4;//8; //3;//7 //8
 	int e_max, c_max;
@@ -123,9 +118,6 @@ private:
 	typedef std::chrono::duration<float, std::milli> duration;
   	h_clock::time_point  start = h_clock::now();
 	utils::time::Timer<std::chrono::nanoseconds> timero;
-
-  	h_clock::time_point  t_grasp_start = h_clock::now();
-  	h_clock::time_point  t_slip_start = h_clock::now();
 	  
   	double elaspedTimeMs=0;
   	double elaspedTimeMst;
@@ -217,10 +209,10 @@ private:
   	std::string object ="Metal";
   	std::string detector ="Harris";
 
-  	int elaspedTime_grasp ;
-  	int elaspedTime_slip ;
 
   	int control_edge_raw_max, control_corner_raw_max;
 };
 }
-#endif /* SLIP_DETECTION_DAVIS_SRC_VISUALSERVOING_H_ */
+#endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */
+
+

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(visual_servoing)
+project(visual_servoing_davis)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -160,9 +160,7 @@ add_executable(visual_servo_node src/VisualServoing.cpp src/visual_servoing_node
 add_executable(test_eigen src/eigen_test.cpp)
 target_link_libraries(visual_servo_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
 target_link_libraries(test_eigen ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
-add_dependencies(visual_servo_node ${catkin_LIBRARIES}  ${Eigen_LIBRARIES}  )
-
-
+add_dependencies(visual_servo_node ${catkin_LIBRARIES}  ${visual_servoing_davis})
 
 
 

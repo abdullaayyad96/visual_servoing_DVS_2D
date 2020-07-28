@@ -5,8 +5,8 @@
  *      Author: raj
  */
 
-#ifndef SLIP_DETECTION_DAVIS_SRC_EDGEDETECTOR_H_
-#define SLIP_DETECTION_DAVIS_SRC_EDGEDETECTOR_H_
+#ifndef VISUAL_SERVO_DAVIS_SRC_EDGEDETECTOR_H_
+#define VISUAL_SERVO_DAVIS_SRC_EDGEDETECTOR_H_
 #include <deque>
 
 #include <ros/ros.h>
@@ -37,4 +37,4 @@ private:
 
 
 }
-#endif /* SLIP_DETECTION_DAVIS_SRC_EDGEDETECTOR_H_ */
+#endif /* VISUAL_SERVO_DAVIS_SRC_EDGEDETECTOR_H_ */

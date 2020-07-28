@@ -5,8 +5,8 @@
  *      Author: raj
  */
 
-#ifndef SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORHARRIS_H_
-#define SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORHARRIS_H_
+#ifndef VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORHARRIS_H_
+#define VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORHARRIS_H_
 
 #include <deque>
 #include <Eigen/Dense>
@@ -17,14 +17,11 @@
 
 #include "harris_local_event_queues.h"
 #include "harris_distinct_queue.h"
-//#include <CompressiveForceGrasp.h>
-//#include <softhandslipdetection.h>
-//#include "SlipDetectionRawTest.h"
+
 #include <VisualServoing.h>
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
-//class CornerDetector_HARRIS : public  CompressiveForceGrasp{
 
 class CornerDetector_HARRIS : public  Visual_Servoing{
 public:
@@ -36,13 +33,11 @@ public:
 	   std::pair<bool,bool> isCorner_Edge_HARRIS (const dvs_msgs::Event &e, double th_E, double th_C);
 	   double isCorner_Edge_HARRISi (const dvs_msgs::Event &e);
 	    bool isCorner (const dvs_msgs::Event &e);
-//	    bool isCornerFAST (const dvs_msgs::Event &e);
-//	    bool isCornerARC (const dvs_msgs::Event &e);
 
 
 private:
-		  HarrisLocalEventQueues* queues_;
-		  ros::NodeHandle pnh_;
+		HarrisLocalEventQueues* queues_;
+		ros::NodeHandle pnh_;
 
 	   Eigen::MatrixXd Gkernel, Sob_G_x, sob_x; // Guassian Kernel, sobel opertor
 	  // const Eigen::MatrixXi local_patch; //9x9 local patch
@@ -76,4 +71,4 @@ private:
 };
 
 }
-#endif /* SLIP_DETECTION_DAVIS_SRC_CORNERDETECTORHARRIS_H_ */
+#endif /* VISUAL_SERVO_DAVIS_SRC_CORNERDETECTORHARRIS_H_ */

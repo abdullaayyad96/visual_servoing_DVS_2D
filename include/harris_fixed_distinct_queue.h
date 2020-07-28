@@ -4,7 +4,7 @@
 #include <vector>
 #include <Eigen/Dense>
 
-namespace slip_detection_davis
+namespace visual_servoing_davis
 {
 
 class HarrisFixedDistinctQueue
