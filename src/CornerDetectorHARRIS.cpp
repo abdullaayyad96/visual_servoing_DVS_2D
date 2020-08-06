@@ -10,7 +10,7 @@
 namespace visual_servoing_davis
 {
 
-	CornerDetector_HARRIS::CornerDetector_HARRIS()
+	CornerDetector_HARRIS::CornerDetector_HARRIS( )
 	{
 		this->update_params(this->queue_size_, this->window_size_, this->harris_threshold_);
 
@@ -129,7 +129,7 @@ namespace visual_servoing_davis
 		this->harris_threshold_ = new_harris_threshold;
 
 		delete(this->queues_);
-		this->queues_ = new HarrisDistinctQueue(window_size_, queue_size_, true);
+		this->queues_ = new HarrisDistinctQueue(window_size_, queue_size_, false);
 	}
 
 

@@ -210,6 +210,7 @@ private:
 	ros::Subscriber cam_info_subs_;
 	bool cam_initialized;
 	image_geometry::PinholeCameraModel cam_;
+	cv::Point2d rectified_point;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

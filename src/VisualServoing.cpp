@@ -60,6 +60,16 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 		if (this->corner_detector_.isCorner(e)) // corner
 		{
 			C_e=e;
+			if (this->cam_initialized)
+			{
+				this->rectified_point = this->cam_.rectifyPoint(cv::Point2d(e.x, e.y));
+				if ((this->rectified_point.x < this->sensor_width_-1) and (this->rectified_point.x > 0) and 
+					(this->rectified_point.y < this->sensor_height_-1) and (this->rectified_point.y > 0))
+				{
+					C_e.x = this->rectified_point.x;
+					C_e.y = this->rectified_point.y;
+				}
+			}	
 			corner_queue.push(C_e);
 			packets_corner.events.push_back(e);
 		}
@@ -71,6 +81,10 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 	packets_corner.events.clear();
 
 
+	if (this->cam_initialized)
+	{
+		this->cam_.rectifyImage(this->davis_frame, this->davis_frame);
+	}	
 	sensor_msgs::Image temp_ros_image;
 	this->createROSFrame(this->davis_frame, temp_ros_image);
 	event_frames_pub.publish(temp_ros_image);
