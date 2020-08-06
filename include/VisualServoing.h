@@ -76,12 +76,11 @@ public:
 	//virtual  bool isCorner (const dvs_msgs::Event &e)= 0;
 
 	// callback and functions
-	void davis_feature_callback(const dvs_msgs::EventArray::ConstPtr 
-
-#include <image_geometry/pinhole_camera_model.h>&msg);
+	void davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg);
 	void tracking_mode_callback(const std_msgs::Bool &msg);
 	void detection_mode_callback(const std_msgs::Bool &msg);
 	void frame_image_callback(const sensor_msgs::Image::ConstPtr &msg);
+	void CamInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &camera_info);
 	void corner_detection();
 	void ee_orientation();
 	void ur_manipulation();
@@ -98,7 +97,6 @@ public:
 	void corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window);
 	void corner_heatmap_time_update(double new_timestamp);
 	void harrisCornerDetection(cv::Mat input_frame);
-	void CamInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &camera_info);
 
 	int e_max, c_max;
 
@@ -123,6 +121,9 @@ private:
 
 
 	robot_mode current_mode = idle; 
+	bool pickup_status = false; //false: job not yet done, true job done
+
+	//parameters for corner detection mode
 	double last_event_time = 0;
 	double first_detection_time = 0;
 	double last_detection_time = 0;
@@ -193,6 +194,11 @@ private:
 	int harris_th = 40;
 	int max_harris_th = 255;
 	int block_size_ = 5;
+	int aperture_size_ = 7;
+	cv::Mat harris_frame_;
+	double k_ = 0.04;
+
+	//PD implementation
 	double k_p = 0.005;
 	double k_d = 0.001;
 	double prev_distance = -1;

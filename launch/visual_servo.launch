@@ -1,9 +1,4 @@
 <launch>
-    <!-- feature detector -->
-  <node name="visual_servoing_node" pkg="visual_servoing_davis" type="visual_servoing_node" output="screen">
-
-  </node> 
-
   <!-- corner visualization -->
   <node name="dvs_renderer_corner_soft" pkg="dvs_renderer" type="dvs_renderer">
     <param name="display_method" value="red-blue"/>
@@ -57,8 +52,13 @@
   
   <!-- camera driver -->  
   <node name="davis_ros_driver" pkg="davis_ros_driver" type="davis_ros_driver">
-    <rosparam command="load" file="$(find davis_ros_driver)/config/ARIC_VS.yaml" />
   </node>
+
+  <rosparam file="$(find davis_ros_driver)/config/ARIC_VS.yaml" />
+
+  <!-- feature detector -->
+  <!-- <node name="visual_servoing_node" pkg="visual_servoing_davis" type="visual_servoing_node" output="screen">
+  </node>  -->
 
 
 
