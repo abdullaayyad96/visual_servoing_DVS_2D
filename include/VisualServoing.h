@@ -9,7 +9,6 @@
 #define VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_
 
 
-
 #pragma once
 
 #include <chrono>
@@ -60,12 +59,11 @@
 #include <sensor_msgs/Image.h>
 #include <ros/console.h>
 
+#include <CornerDetectorHARRIS.h>
+#include <image_geometry/pinhole_camera_model.h>
 
 #include <stddef.h>
 #include <stdlib.h>
-
-#define M_PI 3.14159265358979323846
-
 
 
 namespace visual_servoing_davis
@@ -75,15 +73,12 @@ public:
 	Visual_Servoing();
 	virtual ~Visual_Servoing();
 
+	//virtual  bool isCorner (const dvs_msgs::Event &e)= 0;
 
-	virtual  double isCorner_Edge_HARRISi (const dvs_msgs::Event &e)= 0;
-//	   virtual  bool isCornerFAST (const dvs_msgs::Event &e)= 0;
-//	   virtual  bool isCornerARC (const dvs_msgs::Event &e)= 0;
+	// callback and functions
+	void davis_feature_callback(const dvs_msgs::EventArray::ConstPtr 
 
-
-
-// callback and functions
-	void davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg);
+#include <image_geometry/pinhole_camera_model.h>&msg);
 	void tracking_mode_callback(const std_msgs::Bool &msg);
 	void detection_mode_callback(const std_msgs::Bool &msg);
 	void frame_image_callback(const sensor_msgs::Image::ConstPtr &msg);
@@ -91,6 +86,7 @@ public:
 	void ee_orientation();
 	void ur_manipulation();
 	void publish_data();
+	void createROSFrame(cv::Mat input_frame, sensor_msgs::Image &ros_image);
 
 	void update_corner_variance(double new_timestamp);
 	void update_corners(dvs_msgs::Event corner_event); 
@@ -101,12 +97,15 @@ public:
 
 	void corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window);
 	void corner_heatmap_time_update(double new_timestamp);
+	void harrisCornerDetection(cv::Mat input_frame);
+	void CamInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &camera_info);
 
-	double th1= -0.001;//-0.0000001,
-	double th2= 4;//8; //3;//7 //8
 	int e_max, c_max;
 
 	enum robot_mode {idle, detection, tracking, rotate, pickup};
+
+	visual_servoing_davis::CornerDetector_HARRIS corner_detector_;
+
 private:
 	Eigen::MatrixXd sae;
 	static const int sensor_width_ = 240;
@@ -124,9 +123,6 @@ private:
 
 
 	robot_mode current_mode = idle; 
-	bool pickup_status = false; //false: job not yet done, true job done
-
-	//parameters for corner detection mode
 	double last_event_time = 0;
 	double first_detection_time = 0;
 	double last_detection_time = 0;
@@ -157,8 +153,8 @@ private:
 	cv::Mat corners;
 	std::vector<double> corners_var;
 	double corner_var_constant = 400;
-	double timestamp_update_var = 2 * std::pow(10, 4);
-	double new_event_var = 3000; //1400
+	double timestamp_upisCorner_Edge_HARRISidate_var = 2 * std::pow(10, 4);
+	double new_event_var = 1500; //3000
 	double likelihood_thresh = 0.8;//0.8
 	int corner_association;
 
@@ -173,7 +169,7 @@ private:
 	
 
 	//variables for UR manipulation
-	double velocity = 0.06;
+	double velocity = 0.1;
 	double center_offset_threshold = 2;
 	geometry_msgs::Twist cmd_vel_twist;
 	std_msgs::Float64 orientation_angle;
@@ -182,7 +178,7 @@ private:
 	ros::ServiceServer goal_service, sample_service, exp_reset_service;
 
 	//Subscriber and publisher and nodehandle
-	ros::Publisher noise_events_pub, edge_events_pub, corner_events_pub, event_frames_pub,complete_data, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_mode_pub; // Publish classified online events
+	ros::Publisher corner_events_pub, event_frames_pub,complete_data, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_mode_pub; // Publish classified online events
 	ros::Subscriber davis_sub_; // Subscribe data from Davis
 	ros::Subscriber tracking_mode, detection_mode; // Subscribe data from Davis
 	ros::Subscriber frame_image_sub;
@@ -193,16 +189,21 @@ private:
 	
 	std_srvs::Empty empty_service;
 
-	// Counters
-	int count_raw, count_flat, count_corner, count_edge, t_max_data_compare;
-
 	//parameters for Harris detector
-	int harris_th = 160;
+	int harris_th = 40;
 	int max_harris_th = 255;
-	int block_size_ = 2;
-	int aperture_size_ = 3;
-	cv::Mat harris_frame_;
-	double k_ = 0.04;
+	int block_size_ = 5;
+	double k_p = 0.005;
+	double k_d = 0.001;
+	double prev_distance = -1;
+
+	//DAVIS frame detection
+	cv::Mat davis_frame, davis_frame_mono;
+
+	//Camera Calibration
+	ros::Subscriber cam_info_subs_;
+	bool cam_initialized;
+	image_geometry::PinholeCameraModel cam_;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

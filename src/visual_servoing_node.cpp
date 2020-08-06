@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
 
 	visual_servoing_davis::Visual_Servoing* processs;
-	processs = new visual_servoing_davis::CornerDetector_HARRIS;
+	processs = new visual_servoing_davis::Visual_Servoing;
 
 
 	// Threads

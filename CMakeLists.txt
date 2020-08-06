@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(visual_servoing_davis)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")## System dependencies are found with CMake's conventions
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -7,10 +8,7 @@ project(visual_servoing_davis)
 find_package(catkin REQUIRED cmake_modules)
 find_package(Eigen REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-actionlib
-  actionlib_msgs
   dynamic_reconfigure
-  pluginlib
   geometry_msgs
   message_generation
   rosconsole
@@ -27,30 +25,20 @@ actionlib
   cv_bridge
 )
  
-add_message_files(
-   FILES
+
+find_package(OpenCV REQUIRED)
+find_package(Boost REQUIRED)
+
+catkin_package(
+#INCLUDE_DIRS include
+#LIBRARIES visual_servoing_2
+#CATKIN_DEPENDS roscpp
+#DEPENDS system_lib
 )
 
-generate_messages(
-   DEPENDENCIES
-   std_msgs
-   geometry_msgs
-   sensor_msgs
- )
 
-include_directories( ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS})
-include_directories(${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
-include_directories(${OPENCV_INCLUDE_DIR})
-link_directories(${catkin_LIBRARY_DIRS} ${Eigen_LIBRARY_DIRS})
-include_directories ("${PROJECT_SOURCE_DIR}/include/")
-
-include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/src/visual_servoing_davis/include/")
+include_directories( ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIR}  "${PROJECT_SOURCE_DIR}/include/")
 include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/src/rpg_dvs_ros/davis_ros_driver/include/")
-find_package(Boost REQUIRED COMPONENTS thread system)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
-
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -95,8 +83,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")## System dependencies a
 #   Service2.srv
 # )
 
-## Generate actions in the 'action' folder
-# add_action_files(
+find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS thread system)
+
+find_package (VTK REQUIRED)
+include_directories(${VTK_INCLUDE_DIRS})
+link_directories(${VTK_LIBRARY_DIRS})
+
+find_package(actionlib REQUIRED)
+include_directories(${actionlib_INCLUDE_DIRS})
 #   FILES
 #   Action1.action
 #   Action2.action
@@ -120,35 +115,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")## System dependencies a
 ###########
 ## Build ##
 ###########
-include_directories ("/home/user/catkin_ws/src/baxter_gripper_server/include/")
-
-include_directories ("${PROJECT_SOURCE_DIR}/include/")
-find_package(Boost REQUIRED COMPONENTS thread system)
-include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-  include_directories(${PCL_INCLUDE_DIRS})
-  link_directories(${PCL_LIBRARY_DIRS})
-  add_definitions(${PCL_DEFINITIONS})
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
-find_package (VTK REQUIRED)
-include_directories(${VTK_INCLUDE_DIRS})
-link_directories(${VTK_LIBRARY_DIRS})
-find_package(Boost REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-find_package(Eigen REQUIRED)
-include_directories(${Eigen_INCLUDE_DIRS})
-find_package(OpenCV REQUIRED)
-include_directories(${OPENCV_INCLUDE_DIR})
-find_package(actionlib REQUIRED)
-include_directories(${actionlib_INCLUDE_DIRS})
-
 
 
 add_executable(visual_servoing_node src/visual_servoing_node.cpp src/VisualServoing.cpp src/CornerDetectorHARRIS.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
-add_executable(test_eigen src/eigen_test.cpp)
 target_link_libraries(visual_servoing_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
-target_link_libraries(test_eigen ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
 add_dependencies(visual_servoing_node ${catkin_LIBRARIES}  ${visual_servoing_davis})
 
 
