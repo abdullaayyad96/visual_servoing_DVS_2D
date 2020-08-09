@@ -101,6 +101,7 @@ public:
 	void corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window);
 	void corner_heatmap_time_update(double new_timestamp);
 	void harrisCornerDetection(cv::Mat input_frame);
+	void contourDetection(cv::Mat input_frame);
 
 	int e_max, c_max;
 
@@ -209,6 +210,11 @@ private:
 
 	//DAVIS frame detection
 	cv::Mat davis_frame, davis_frame_mono;
+	std::vector<std::vector<cv::Point>> contours;
+	std::vector<cv::Point> largest_contour;
+	cv::Rect largest_rect;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::Point contour_center;
 
 	//Camera Calibration
 	ros::Subscriber cam_info_subs_;

@@ -88,21 +88,21 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 			packets_corner.events.push_back(e);
 		}
 
-	 	this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
+	 	// this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
 	}
 
 	corner_events_pub.publish(packets_corner);
 	packets_corner.events.clear();
 
 
-	if (this->cam_initialized)
-	{
-		this->cam_.rectifyImage(this->davis_frame, this->davis_frame);
-	}	
-	sensor_msgs::Image temp_ros_image;
-	this->createROSFrame(this->davis_frame, temp_ros_image);
-	event_frames_pub.publish(temp_ros_image);
-	cvtColor(this->davis_frame, this->davis_frame_mono, cv::COLOR_BGR2GRAY);
+	// if (this->cam_initialized)
+	// {
+	// 	this->cam_.rectifyImage(this->davis_frame, this->davis_frame);
+	// }	
+	// sensor_msgs::Image temp_ros_image;
+	// this->createROSFrame(this->davis_frame, temp_ros_image);
+	// event_frames_pub.publish(temp_ros_image);
+	// cvtColor(this->davis_frame, this->davis_frame_mono, cv::COLOR_BGR2GRAY);
 }
 
 void Visual_Servoing::createROSFrame(cv::Mat input_frame, sensor_msgs::Image &ros_image)
@@ -144,6 +144,30 @@ void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame)
     }
 }
 
+
+void Visual_Servoing::contourDetection(cv::Mat input_frame)
+{
+	cv::dilate(input_frame, input_frame, this->dilate_kernel);
+	cv::findContours(input_frame, this->contours, cv::RETR_TREE, cv::CHAIN_APPROX_NONE);
+
+	//find largest contour
+	int largest_contour_size = 0;
+	for (int i=0; i<this->contours.size(); i++)
+	{
+		if(this->contours[i].size() > largest_contour_size)
+		{
+			this->largest_contour = this->contours[i];
+			largest_contour_size = this->contours[i].size();
+		}
+	}
+
+	if (largest_contour_size>50)
+	{
+		this->largest_rect = cv::boundingRect(this->largest_contour);
+		this->contour_center.x = this->largest_rect.x;
+		this->contour_center.y = this->largest_rect.y;	
+	}
+}
 
 void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 {
@@ -438,73 +462,73 @@ void Visual_Servoing::ur_manipulation()
 
 void Visual_Servoing::publish_data()
 {
-this->corner_heatmap_cv_mono8 = cv::Scalar(0);
+	this->corner_heatmap_cv_mono8 = cv::Scalar(0);
 
-//add lines
-//cv::line(this->corner_heatmap_cv_mono8, cv::Point(this->sensor_width_/2, 0), cv::Point(this->sensor_width_/2, this->sensor_height_), cv::Scalar(255));
-//cv::line(this->corner_heatmap_cv_mono8, cv::Point(0, this->sensor_height_/2), cv::Point(this->sensor_width_, this->sensor_height_/2), cv::Scalar(255));
+	//add lines
+	//cv::line(this->corner_heatmap_cv_mono8, cv::Point(this->sensor_width_/2, 0), cv::Point(this->sensor_width_/2, this->sensor_height_), cv::Scalar(255));
+	//cv::line(this->corner_heatmap_cv_mono8, cv::Point(0, this->sensor_height_/2), cv::Point(this->sensor_width_, this->sensor_height_/2), cv::Scalar(255));
 
-//iterate through corners and set points
-for (int i = 0 ; i < this->corners.total() ; i++)
-{
-	this->corner_heatmap_cv_mono8.at<uint8_t>(this->corners.at<cv::Point>(i)) = 255;
-}
-this->corner_heatmap_cv_mono8.at<uint8_t>(this->object_center.y, this->object_center.x) = 255;
+	//iterate through corners and set points
+	for (int i = 0 ; i < this->corners.total() ; i++)
+	{
+		this->corner_heatmap_cv_mono8.at<uint8_t>(this->corners.at<cv::Point>(i)) = 255;
+	}
+	this->corner_heatmap_cv_mono8.at<uint8_t>(this->object_center.y, this->object_center.x) = 255;
 
-cv::Mat colored_SACE_SAVE = cv::Mat(180, 240, CV_8UC3);
+	cv::Mat colored_SACE_SAVE = cv::Mat(180, 240, CV_8UC3);
 
-cv::cvtColor(this->corner_heatmap_cv_mono8, colored_SACE_SAVE, cv::COLOR_GRAY2RGB);
-cv::Vec3b color = cv::Vec3b(135, 206, 255);
-colored_SACE_SAVE.at<cv::Vec3b>(this->object_center.y, this->object_center.x) = color;
+	cv::cvtColor(this->corner_heatmap_cv_mono8, colored_SACE_SAVE, cv::COLOR_GRAY2RGB);
+	cv::Vec3b color = cv::Vec3b(135, 206, 255);
+	colored_SACE_SAVE.at<cv::Vec3b>(this->object_center.y, this->object_center.x) = color;
 
-std_msgs::Header header; // empty header
-header.seq = 1; // user defined counter
-header.stamp = ros::Time::now(); // time
-//this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::MONO8, this->corner_heatmap_cv_mono8);
-this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::RGB8, colored_SACE_SAVE);
+	std_msgs::Header header; // empty header
+	header.seq = 1; // user defined counter
+	header.stamp = ros::Time::now(); // time
+	//this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::MONO8, this->corner_heatmap_cv_mono8);
+	this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::RGB8, colored_SACE_SAVE);
 
-this->img_bridge.toImageMsg(this->corner_heatmap_image); // from cv_bridge to sensor_msgs::Image
+	this->img_bridge.toImageMsg(this->corner_heatmap_image); // from cv_bridge to sensor_msgs::Image
 
-pub_corners_image.publish(this->corner_heatmap_image); // ros::Publisher pub_img = node.advertise<sensor_msgs::Image>("topic", queuesize);
+	pub_corners_image.publish(this->corner_heatmap_image); // ros::Publisher pub_img = node.advertise<sensor_msgs::Image>("topic", queuesize);
 
-cv::convertScaleAbs(this->corner_heatmap_cv, this->corner_heatmap_cv_mono8, 255, 0.0);
+	cv::convertScaleAbs(this->corner_heatmap_cv, this->corner_heatmap_cv_mono8, 255, 0.0);
 
-this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::MONO8, this->corner_heatmap_cv_mono8);
+	this->img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::MONO8, this->corner_heatmap_cv_mono8);
 
-this->img_bridge.toImageMsg(this->corner_heatmap_image); // from cv_bridge to sensor_msgs::Image
+	this->img_bridge.toImageMsg(this->corner_heatmap_image); // from cv_bridge to sensor_msgs::Image
 
-pub_heatmap.publish(this->corner_heatmap_image); // ros::Publisher pub_img = node.advertise<sensor_msgs::Image>("topic", queuesize);
+	pub_heatmap.publish(this->corner_heatmap_image); // ros::Publisher pub_img = node.advertise<sensor_msgs::Image>("topic", queuesize);
 
 }
 
 
 void Visual_Servoing::corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window)
 {
-int x_start_index = std::max(event_x-x_window, 0);
-int x_end_index = std::min(event_x+x_window, this->sensor_height_-1);
-int y_start_index = std::max(event_y-y_window, 0);
-int y_end_index = std::min(event_y+y_window, this->sensor_width_-1);
+	int x_start_index = std::max(event_x-x_window, 0);
+	int x_end_index = std::min(event_x+x_window, this->sensor_height_-1);
+	int y_start_index = std::max(event_y-y_window, 0);
+	int y_end_index = std::min(event_y+y_window, this->sensor_width_-1);
 
-for (int i = x_start_index ; i <= x_end_index ; i++)
-{
-	for (int j = y_start_index ; j <= y_end_index ; j++)
+	for (int i = x_start_index ; i <= x_end_index ; i++)
 	{
-		this->corner_heatmap_cv.at<double>(i,j) += this->corner_alpha * std::exp(-0.5 * ((std::pow(i-event_x, 2)/x_var) + (std::pow(j-event_y, 2)/y_var)));// / (2*M_PI*std::sqrt(x_var*y_var));
+		for (int j = y_start_index ; j <= y_end_index ; j++)
+		{
+			this->corner_heatmap_cv.at<double>(i,j) += this->corner_alpha * std::exp(-0.5 * ((std::pow(i-event_x, 2)/x_var) + (std::pow(j-event_y, 2)/y_var)));// / (2*M_PI*std::sqrt(x_var*y_var));
+		}
 	}
-}
 
-//scaledown to avoid flip overs
-double min_val, max_val;
+	//scaledown to avoid flip overs
+	double min_val, max_val;
 
-cv::minMaxLoc(this->corner_heatmap_cv, &min_val, &max_val);
-if(max_val > (2.8))
-{
-		this->corner_heatmap_cv =  this->corner_heatmap_cv * (2.8) / max_val;
-}
-else if(std::abs(min_val) == std::numeric_limits<double>::infinity())
-{
-	this->corner_heatmap_cv = cv::Mat::zeros(this->sensor_height_, this->sensor_width_, CV_64FC1);
-}
+	cv::minMaxLoc(this->corner_heatmap_cv, &min_val, &max_val);
+	if(max_val > (2.8))
+	{
+			this->corner_heatmap_cv =  this->corner_heatmap_cv * (2.8) / max_val;
+	}
+	else if(std::abs(min_val) == std::numeric_limits<double>::infinity())
+	{
+		this->corner_heatmap_cv = cv::Mat::zeros(this->sensor_height_, this->sensor_width_, CV_64FC1);
+	}
 }
 
 void Visual_Servoing::corner_heatmap_time_update(double new_timestamp)
