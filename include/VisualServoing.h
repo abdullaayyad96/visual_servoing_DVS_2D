@@ -65,6 +65,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <visual_servoing_davis/VSCfgConfig.h>
+
 
 namespace visual_servoing_davis
 {
@@ -86,6 +89,7 @@ public:
 	void ur_manipulation();
 	void publish_data();
 	void createROSFrame(cv::Mat input_frame, sensor_msgs::Image &ros_image);
+	void parameter_callback(visual_servoing_davis::VSCfgConfig &config, uint32_t level);
 
 	void update_corner_variance(double new_timestamp);
 	void update_corners(dvs_msgs::Event corner_event); 
@@ -101,7 +105,7 @@ public:
 	int e_max, c_max;
 
 	enum robot_mode {idle, detection, tracking, rotate, pickup};
-
+	
 	visual_servoing_davis::CornerDetector_HARRIS corner_detector_;
 
 private:
@@ -211,6 +215,10 @@ private:
 	bool cam_initialized;
 	image_geometry::PinholeCameraModel cam_;
 	cv::Point2d rectified_point;
+
+	//dynamic config
+	dynamic_reconfigure::Server<visual_servoing_davis::VSCfgConfig> server_;
+	dynamic_reconfigure::Server<visual_servoing_davis::VSCfgConfig>::CallbackType f_;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

@@ -129,7 +129,7 @@ namespace visual_servoing_davis
 		this->harris_threshold_ = new_harris_threshold;
 
 		delete(this->queues_);
-		this->queues_ = new HarrisDistinctQueue(window_size_, queue_size_, false);
+		this->queues_ = new HarrisDistinctQueue(window_size_, queue_size_, true);
 	}
 
 

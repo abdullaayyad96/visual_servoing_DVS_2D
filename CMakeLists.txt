@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
   rosconsole
+  image_geometry
   roscpp
   rospy
   sensor_msgs
@@ -29,16 +30,22 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED)
 
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+generate_dynamic_reconfigure_options(
+  cfg/VSCfg.cfg
+)
+
+
+include_directories( ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIR}  "${PROJECT_SOURCE_DIR}/include/")
+include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/src/rpg_dvs_ros/davis_ros_driver/include/")
+
+
 catkin_package(
 #INCLUDE_DIRS include
 #LIBRARIES visual_servoing_2
 #CATKIN_DEPENDS roscpp
 #DEPENDS system_lib
 )
-
-
-include_directories( ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIR}  "${PROJECT_SOURCE_DIR}/include/")
-include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/src/rpg_dvs_ros/davis_ros_driver/include/")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -83,6 +90,7 @@ include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/s
 #   Service2.srv
 # )
 
+
 find_package(Boost REQUIRED)
 find_package(Boost REQUIRED COMPONENTS thread system)
 
@@ -119,7 +127,7 @@ include_directories(${actionlib_INCLUDE_DIRS})
 
 add_executable(visual_servoing_node src/visual_servoing_node.cpp src/VisualServoing.cpp src/CornerDetectorHARRIS.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
 target_link_libraries(visual_servoing_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
-add_dependencies(visual_servoing_node ${catkin_LIBRARIES}  ${visual_servoing_davis})
+add_dependencies(visual_servoing_node ${catkin_LIBRARIES}  ${visual_servoing_davis} ${PROJECT_NAME}_gencfg)
 
 
 # Print some message showing some of them

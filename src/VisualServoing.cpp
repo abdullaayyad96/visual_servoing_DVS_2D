@@ -27,6 +27,9 @@ Visual_Servoing::Visual_Servoing() {
 	cmd_rotate_ee_pub = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee", 1);
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
 
+	this->f_ = boost::bind(&Visual_Servoing::parameter_callback, this, _1, _2);
+	this->server_.setCallback(this->f_);
+
 	sae= Eigen::MatrixXd::Zero(sensor_width_,sensor_height_);
 }
 
@@ -41,6 +44,17 @@ void Visual_Servoing::CamInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &c
 	this->cam_info_subs_.shutdown();        
 }
 
+void Visual_Servoing::parameter_callback(visual_servoing_davis::VSCfgConfig &config, uint32_t level)
+{
+	this->corner_detector_.update_params(config.eHarris_queue_size, config.eHarris_window_size, config.eHarris_threshold);
+	this->harris_th = config.Harris_threshold;
+	this->block_size_ = config.Harris_block_size;
+	this->aperture_size_ = config.Harris_aperture_size;
+	this->velocity = config.target_velocity;
+	this->time_decay_factor = config.heatmap_time_decay_factor;
+	this->corner_alpha = config.heatmap_corner_weight;
+	this->heatmap_thresh = config.heatmap_threshold;
+}
 
 void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg)
 {
@@ -184,7 +198,7 @@ void Visual_Servoing::corner_detection()
 		this->temp_e = this->corner_queue.front();
 		this->corner_queue.pop();
 		this->corner_heatmap_add_event(this->temp_e.y, 10, 15, this->temp_e.x, 10, 15);
-		this->corner_heatmap_time_update(this->temp_e.ts.toSec());
+		this->corner_heatmap_time_update(this->temp_e.ts.toNSec()/1000000000);
 
 		if (this->current_mode==robot_mode::detection || this->current_mode==robot_mode::idle || this->current_mode==robot_mode::rotate)
 		{
@@ -280,7 +294,7 @@ void Visual_Servoing::corner_detection()
 				}
 			}
 		}
-		this->last_event_time = this->temp_e.ts.toSec();
+		this->last_event_time = this->temp_e.ts.toNSec()/1000000000;
 	}
 }
 

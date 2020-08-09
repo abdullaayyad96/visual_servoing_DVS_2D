@@ -31,6 +31,8 @@ namespace visual_servoing_davis
 			double isCorner_Edge_HARRISi (const dvs_msgs::Event &e);
 			bool isCorner (const dvs_msgs::Event &e);
 
+			void update_params(int new_queue_size, int new_windiw_size, double new_harris_threshold_);
+
 
 		private:
 			HarrisLocalEventQueues* queues_;
@@ -57,8 +59,6 @@ namespace visual_servoing_davis
 
 			int factorial(int n) const;
 			int pasc(int k, int n) const;
-			void update_params(int new_queue_size, int new_windiw_size, double new_harris_threshold_);
-
 	};
 
 }
