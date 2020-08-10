@@ -11,14 +11,15 @@ namespace visual_servoing_davis
 Visual_Servoing::Visual_Servoing() {
 
 	// Subscribers
-	//davis_sub_ = pnh_.subscribe("/dvs/events", 0, &Visual_Servoing::davis_feature_callback, this);
+	davis_sub_ = pnh_.subscribe("/dvs/events", 0, &Visual_Servoing::davis_feature_callback, this);
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
 	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 10, &Visual_Servoing::CamInfoCallback, this);
-	frame_image_sub = pnh_.subscribe("/dvs/image_raw", 0, &Visual_Servoing::frame_image_callback, this);
+	//frame_image_sub = pnh_.subscribe("/dvs/image_raw", 0, &Visual_Servoing::frame_image_callback, this);
 
 	//Pubishers
-	centroid_pub = pnh_.advertise<dvs_msgs::EventArray>("/object_center", 1);
+	centroid_pub = pnh_.advertise<dvs_msgs::Event>("/object_center", 1);
+	processed_corner_pub = pnh_.advertise<dvs_msgs::EventArray>("/object_corners", 1);
 	corner_events_pub =pnh_.advertise<dvs_msgs::EventArray>("/dvs_corner_events_soft", 1);
 	pub_heatmap =pnh_.advertise<sensor_msgs::Image>("/corner_heatmap", 1);
 	pub_corners_image =pnh_.advertise<sensor_msgs::Image>("/corners", 1);
@@ -188,7 +189,10 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 		this->current_mode = this->detection;
 		this->first_detection_time = ros::Time::now().toSec();
 		for(int i=0 ; i < this->corners.total() ; i++)
+		{
 			this->corners_var[i] = this->corner_var_constant;
+		}
+		ROS_INFO("Start detection mode: %lld", (long long)ros::Time::now().toNSec());
 	}
 	else
 	{
@@ -309,7 +313,7 @@ void Visual_Servoing::corner_detection()
 				if (temp_tracking_err > this->tracking_err_thresh)
 				{
 					this->false_tracking_counter++;
-					std::cout << this->false_tracking_counter << std::endl;
+					ROS_INFO("False tracking counter: %lld", this->false_tracking_counter);
 				}
 				else
 				{
@@ -319,10 +323,10 @@ void Visual_Servoing::corner_detection()
 
 				if (this->false_tracking_counter >= this->false_tracking_thresh)
 				{
-					//this->current_mode = robot_mode::detection;
+					this->current_mode = robot_mode::detection;
 					this->detection_span = 2;
 					this->false_tracking_counter = 0;
-					ROS_DEBUG("Switch back to detection, %f corners, %f error distance", this->corners.total(), temp_tracking_err);
+					ROS_INFO("Switch back to detection mode, %lld corners, %f error distance, %lld", (long long)this->corners.total(), (float)temp_tracking_err, (long long)ros::Time::now().toNSec());
 				}
 			}
 		}
@@ -435,7 +439,9 @@ void Visual_Servoing::ur_manipulation()
 		cmd_rotate_ee_pub_x.publish(this->orientation_angle);
 		std::this_thread::sleep_for(std::chrono::seconds(2));
 		std_msgs::Bool ur10_tracking_mode;
+		this->current_mode = robot_mode::pickup;
 		ur10_tracking_mode.data = true;				
+		ROS_INFO("Switch to tracking mode, %lld corners, %lld time", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());
 		this->tracking_mode_callback(ur10_tracking_mode);
 	}
 	else if (this->current_mode==robot_mode::tracking)
@@ -456,6 +462,7 @@ void Visual_Servoing::ur_manipulation()
 			this->current_mode=robot_mode::rotate;
 			this->cmd_vel_twist.linear.x = 0;
 			this->cmd_vel_twist.linear.y = 0;
+			ROS_INFO("Switch to ee rotate mode:, %lld", (long long)ros::Time::now().toNSec());
 		}		
 		cmd_vel_pub.publish(this->cmd_vel_twist);
 	}
@@ -465,6 +472,7 @@ void Visual_Servoing::ur_manipulation()
 		cmd_rotate_ee_pub.publish(this->orientation_angle);
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		this->current_mode = robot_mode::pickup;
+		ROS_INFO("Switch to grasp mode:, %lld", (long long)ros::Time::now().toNSec());
 	}	  
 	else if (this->current_mode==robot_mode::pickup)
 	{
@@ -473,6 +481,7 @@ void Visual_Servoing::ur_manipulation()
 			ros::service::call("ur_pickup", this->empty_service);
 			this->pickup_status = true;
 		}
+		ROS_INFO("Grasp complete:, %lld", (long long)ros::Time::now().toNSec());
 		//this->current_mode = robot_mode::idle;
 	}
 }
@@ -516,6 +525,23 @@ void Visual_Servoing::publish_data()
 	this->img_bridge.toImageMsg(this->corner_heatmap_image); // from cv_bridge to sensor_msgs::Image
 
 	pub_heatmap.publish(this->corner_heatmap_image); // ros::Publisher pub_img = node.advertise<sensor_msgs::Image>("topic", queuesize);
+
+	dvs_msgs::Event center_event;
+	center_event.x = object_center.x;
+	center_event.y = object_center.y;
+	this->centroid_pub.publish(center_event);
+
+	dvs_msgs::EventArray packets_corner;
+	packets_corner.width = this->sensor_width_;
+	packets_corner.height = this->sensor_height_;
+	//iterate through corners and set points
+	for (int i = 0 ; i < this->corners.total() ; i++)
+	{
+		center_event.x = this->corners.at<cv::Point>(i).x;
+		center_event.y = this->corners.at<cv::Point>(i).y;
+		packets_corner.events.push_back(center_event);
+	}
+	this->processed_corner_pub.publish(packets_corner);
 
 }
 
