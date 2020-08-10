@@ -46,7 +46,7 @@ static void robot_EE_movement(visual_servoing_davis::Visual_Servoing* data_ccoll
 {
 	while (ros::ok())
 	{
-		std::this_thread::sleep_for(std::chrono::microseconds(10000)); // Sampling
+		std::this_thread::sleep_for(std::chrono::microseconds(30000)); // Sampling
 
 		data_ccollector->ur_manipulation();
 	}
@@ -56,7 +56,7 @@ static void publish_whole_data(visual_servoing_davis::Visual_Servoing* data_ccol
 {
 	while (ros::ok())
 	{
-		std::this_thread::sleep_for(std::chrono::microseconds(10000)); // Sampling
+		std::this_thread::sleep_for(std::chrono::microseconds(100000)); // Sampling
 
 		data_ccollector->publish_data();
 	}

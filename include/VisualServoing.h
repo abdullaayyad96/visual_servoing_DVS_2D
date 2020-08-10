@@ -184,7 +184,7 @@ private:
 	ros::ServiceServer goal_service, sample_service, exp_reset_service;
 
 	//Subscriber and publisher and nodehandle
-	ros::Publisher corner_events_pub, event_frames_pub,complete_data, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_mode_pub; // Publish classified online events
+	ros::Publisher corner_events_pub, event_frames_pub,complete_data, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_rotate_ee_pub_x, cmd_mode_pub; // Publish classified online events
 	ros::Subscriber davis_sub_; // Subscribe data from Davis
 	ros::Subscriber tracking_mode, detection_mode; // Subscribe data from Davis
 	ros::Subscriber frame_image_sub;
