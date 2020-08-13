@@ -133,7 +133,7 @@ private:
 	double first_detection_time = 0;
 	double last_detection_time = 0;
 	double detection_span = 3;
-	double detection_correction_priod = 0.3;
+	double detection_correction_priod = 0.5;
 	double tracking_err_thresh = 30;
 	int false_tracking_counter = 0;
 	int false_tracking_thresh = 3;
@@ -142,7 +142,7 @@ private:
 
 	cv::Mat corner_heatmap_cv = cv::Mat(180, 240, CV_64FC1);
     cv::Mat dilated_heatmap = cv::Mat(180, 240, CV_8UC1);
-	cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+	cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(25, 25));
     cv::Mat processed_heatmap = cv::Mat::zeros(180, 240, CV_8UC1);
 	cv::Mat frame;
 	
@@ -159,7 +159,6 @@ private:
 	cv::Mat corners;
 	std::vector<double> corners_var;
 	double corner_var_constant = 400;
-	double timestamp_upisCorner_Edge_HARRISidate_var = 2 * std::pow(10, 4);
 	double new_event_var = 1500; //3000
 	double likelihood_thresh = 0.8;//0.8
 	int corner_association;
@@ -204,7 +203,7 @@ private:
 	double k_ = 0.04;
 
 	//PD implementation
-	double k_p = 0.005;
+	double k_p = 0.004;
 	double k_d = 0.001;
 	double prev_distance = -1;
 

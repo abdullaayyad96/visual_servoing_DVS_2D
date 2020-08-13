@@ -11,11 +11,11 @@ namespace visual_servoing_davis
 Visual_Servoing::Visual_Servoing() {
 
 	// Subscribers
-	davis_sub_ = pnh_.subscribe("/dvs/events", 0, &Visual_Servoing::davis_feature_callback, this);
+	// davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
 	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 10, &Visual_Servoing::CamInfoCallback, this);
-	//frame_image_sub = pnh_.subscribe("/dvs/image_raw", 0, &Visual_Servoing::frame_image_callback, this);
+	frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
 
 	//Pubishers
 	centroid_pub = pnh_.advertise<dvs_msgs::Event>("/object_center", 1);
@@ -24,7 +24,7 @@ Visual_Servoing::Visual_Servoing() {
 	pub_heatmap =pnh_.advertise<sensor_msgs::Image>("/corner_heatmap", 1);
 	pub_corners_image =pnh_.advertise<sensor_msgs::Image>("/corners", 1);
 	event_frames_pub =pnh_.advertise<sensor_msgs::Image>("/event_frame", 1);
-	cmd_vel_pub = pnh_.advertise<geometry_msgs::Twist>("/ur_cmd_vel", 1);
+	cmd_vel_pub = pnh_.advertise<geometry_msgs::Twist>("/ur_cmd_vel", 2);
 	cmd_rotate_ee_pub = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee", 1);
 	cmd_rotate_ee_pub_x = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee_x", 1);
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
@@ -53,9 +53,18 @@ void Visual_Servoing::parameter_callback(visual_servoing_davis::VSCfgConfig &con
 	this->block_size_ = config.Harris_block_size;
 	this->aperture_size_ = config.Harris_aperture_size;
 	this->velocity = config.target_velocity;
+	this->center_offset_threshold = config.center_offset_threshold;
 	this->time_decay_factor = config.heatmap_time_decay_factor;
 	this->corner_alpha = config.heatmap_corner_weight;
 	this->heatmap_thresh = config.heatmap_threshold;
+	this->dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(config.heatmap_dilate_kernel_size, config.heatmap_dilate_kernel_size));
+	this->corner_var_constant = config.tracking_corner_var;
+	this->new_event_var = config.tracking_event_var;
+	this->likelihood_thresh = config.tracking_likelihood_thresh;
+	this->k_p = config.tracking_kp;
+	this->k_d = config.tracking_kd;
+	this->tracking_err_thresh = config.tracking_err_thresh;
+	this->false_tracking_thresh = config.false_tracking_thresh;
 }
 
 void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg)
@@ -76,36 +85,36 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 		if (this->corner_detector_.isCorner(e)) // corner
 		{
 			C_e=e;
-			if (this->cam_initialized)
-			{
-				this->rectified_point = this->cam_.rectifyPoint(cv::Point2d(e.x, e.y));
-				if ((this->rectified_point.x < this->sensor_width_-1) and (this->rectified_point.x > 0) and 
-					(this->rectified_point.y < this->sensor_height_-1) and (this->rectified_point.y > 0))
-				{
-					C_e.x = this->rectified_point.x;
-					C_e.y = this->rectified_point.y;
-				}
-			}	
+			// if (this->cam_initialized)
+			// {
+			// 	this->rectified_point = this->cam_.rectifyPoint(cv::Point2d(e.x, e.y));
+			// 	if ((this->rectified_point.x < this->sensor_width_-1) and (this->rectified_point.x > 0) and 
+			// 		(this->rectified_point.y < this->sensor_height_-1) and (this->rectified_point.y > 0))
+			// 	{
+			// 		C_e.x = this->rectified_point.x;
+			// 		C_e.y = this->rectified_point.y;
+			// 	}
+			// }	
 			corner_queue.push(C_e);
 			packets_corner.events.push_back(e);
 		}
 
-	 	this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
+	 	// this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
 	}
 
 	corner_events_pub.publish(packets_corner);
 	packets_corner.events.clear();
 
 
-	if (this->cam_initialized)
-	{
-		this->cam_.rectifyImage(this->davis_frame, this->davis_frame);
-	}	
-	//cvtColor(this->davis_frame, this->davis_frame_mono, cv::COLOR_BGR2GRAY);
-	//this->contourDetection(this->davis_frame_mono);
-	sensor_msgs::Image temp_ros_image;
-	this->createROSFrame(this->davis_frame, temp_ros_image);
-	event_frames_pub.publish(temp_ros_image);
+// 	if (this->cam_initialized)
+// 	{
+// 		this->cam_.rectifyImage(this->davis_frame, this->davis_frame);
+// 	}	
+// 	//cvtColor(this->davis_frame, this->davis_frame_mono, cv::COLOR_BGR2GRAY);
+// 	//this->contourDetection(this->davis_frame_mono);
+// 	sensor_msgs::Image temp_ros_image;
+// 	this->createROSFrame(this->davis_frame, temp_ros_image);
+// 	event_frames_pub.publish(temp_ros_image);
 }
 
 void Visual_Servoing::createROSFrame(cv::Mat input_frame, sensor_msgs::Image &ros_image)
@@ -141,6 +150,7 @@ void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame)
             {
 				C_e.x = j;
 				C_e.y = i;
+				C_e.ts = ros::Time::now();
 				corner_queue.push(C_e);
             }
         }
@@ -183,7 +193,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	std_msgs::Bool ur10_detection_mode;
 	ur10_detection_mode.data = msg.data;
 	cmd_mode_pub.publish(ur10_detection_mode);
-	this->detection_span = 6;
+	this->detection_span = 3;
 	if (msg.data)
 	{
 		this->current_mode = this->detection;
@@ -203,8 +213,8 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	}	
 	//this->random_initial_center.x = (int)(rand() % this->sensor_width_);
 	//this->random_initial_center.y = (int)(rand() % this->sensor_height_);
-	this->random_initial_center.x = (int)(this->sensor_width_/2);
-	this->random_initial_center.y = 0;
+	this->random_initial_center.x = (int)(this->sensor_width_);
+	this->random_initial_center.y = 0;//(int)(this->sensor_width_);
 }
 
 void Visual_Servoing::tracking_mode_callback(const std_msgs::Bool &msg)
@@ -264,8 +274,8 @@ void Visual_Servoing::corner_detection()
 			// 	std_msgs::Bool ur10_tracking_mode;
 			// 	ur10_tracking_mode.data = true;				
 			// 	this->tracking_mode_callback(ur10_tracking_mode);
-
-			// 	ROS_DEBUG("Switch to tracking, %f corners", this->corners.total());
+				
+			// 	ROS_INFO("Switch to tracking mode, %lld corners, %lld time", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());
 			// }
 			this->last_detection_time = ros::Time::now().toSec();
 		}
@@ -323,6 +333,9 @@ void Visual_Servoing::corner_detection()
 
 				if (this->false_tracking_counter >= this->false_tracking_thresh)
 				{
+					this->cmd_vel_twist.linear.x = 0;
+					this->cmd_vel_twist.linear.y = 0;	
+					cmd_vel_pub.publish(this->cmd_vel_twist);
 					this->current_mode = robot_mode::detection;
 					this->detection_span = 2;
 					this->false_tracking_counter = 0;
@@ -422,8 +435,8 @@ void Visual_Servoing::ur_manipulation()
 		// double distance = std::sqrt(std::pow(this->random_initial_center.x - (((double)this->sensor_width_)/2.0),2) + std::pow(this->random_initial_center.y - (((double)this->sensor_height_)/2.0),2));
 		// if (distance >= this->center_offset_threshold)
 		// {
-		// 	this->cmd_vel_twist.linear.x = (this->random_initial_center.x - (((double)this->sensor_width_)/2.0)) * 0.03 / distance;
-		// 	this->cmd_vel_twist.linear.y = (this->random_initial_center.y - (((double)this->sensor_height_)/2.0)) * 0.03 / distance;
+		// 	this->cmd_vel_twist.linear.x = (this->random_initial_center.x - (((double)this->sensor_width_)/2.0)) * 0.05 / distance;
+		// 	this->cmd_vel_twist.linear.y = (this->random_initial_center.y - (((double)this->sensor_height_)/2.0)) * 0.05 / distance;
 		// }
 		// else
 		// {
@@ -432,10 +445,10 @@ void Visual_Servoing::ur_manipulation()
 		// 	this->cmd_vel_twist.linear.y = 0;
 		// }		
 		// cmd_vel_pub.publish(this->cmd_vel_twist);
-		this->orientation_angle.data = 0.2;
+		this->orientation_angle.data = 0.1;
 		cmd_rotate_ee_pub_x.publish(this->orientation_angle);
 		std::this_thread::sleep_for(std::chrono::seconds(2));
-		this->orientation_angle.data = -0.2;
+		this->orientation_angle.data = -0.1;
 		cmd_rotate_ee_pub_x.publish(this->orientation_angle);
 		std::this_thread::sleep_for(std::chrono::seconds(2));
 		std_msgs::Bool ur10_tracking_mode;
@@ -480,8 +493,8 @@ void Visual_Servoing::ur_manipulation()
 		{
 			ros::service::call("ur_pickup", this->empty_service);
 			this->pickup_status = true;
+			ROS_INFO("Grasp complete:, %lld", (long long)ros::Time::now().toNSec());
 		}
-		ROS_INFO("Grasp complete:, %lld", (long long)ros::Time::now().toNSec());
 		//this->current_mode = robot_mode::idle;
 	}
 }
@@ -542,6 +555,7 @@ void Visual_Servoing::publish_data()
 		packets_corner.events.push_back(center_event);
 	}
 	this->processed_corner_pub.publish(packets_corner);
+	packets_corner.events.clear();
 
 }
 

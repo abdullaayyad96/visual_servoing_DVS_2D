@@ -28,8 +28,8 @@
   </node>
 
   <!-- feature detector -->
-  <node name="visual_servoing_node" pkg="visual_servoing_davis" type="visual_servoing_node" output="screen">
-  </node> 
+  <!-- <node name="visual_servoing_node" pkg="visual_servoing_davis" type="visual_servoing_node" output="screen">
+  </node>  -->
 
 
 
