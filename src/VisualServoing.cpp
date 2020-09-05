@@ -11,11 +11,11 @@ namespace visual_servoing_davis
 Visual_Servoing::Visual_Servoing() {
 
 	// Subscribers
-	// davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
+	davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
 	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 10, &Visual_Servoing::CamInfoCallback, this);
-	frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
+	// frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
 
 	//Pubishers
 	centroid_pub = pnh_.advertise<dvs_msgs::Event>("/object_center", 1);
@@ -193,7 +193,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	std_msgs::Bool ur10_detection_mode;
 	ur10_detection_mode.data = msg.data;
 	cmd_mode_pub.publish(ur10_detection_mode);
-	this->detection_span = 3;
+	this->detection_span = 1;
 	if (msg.data)
 	{
 		this->current_mode = this->detection;
@@ -213,7 +213,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	}	
 	//this->random_initial_center.x = (int)(rand() % this->sensor_width_);
 	//this->random_initial_center.y = (int)(rand() % this->sensor_height_);
-	this->random_initial_center.x = (int)(this->sensor_width_);
+	this->random_initial_center.x = (int)(this->sensor_width_/2);
 	this->random_initial_center.y = 0;//(int)(this->sensor_width_);
 }
 
@@ -465,16 +465,27 @@ void Visual_Servoing::ur_manipulation()
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= this->center_offset_threshold)
+		if (distance >= 10 * this->center_offset_threshold)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
+			this->tracking_zero_counter = 0;
+		}
+		else if (distance >= this->center_offset_threshold)
+		{
+			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (3*distance);
+			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (3*distance);
+			this->tracking_zero_counter = 0;
 		}
 		else
 		{
-			this->current_mode=robot_mode::rotate;
 			this->cmd_vel_twist.linear.x = 0;
 			this->cmd_vel_twist.linear.y = 0;
+			this->tracking_zero_counter++;
+		}
+		if(this->tracking_zero_counter > 50)
+		{
+			this->current_mode=robot_mode::rotate;
 			ROS_INFO("Switch to ee rotate mode:, %lld", (long long)ros::Time::now().toNSec());
 		}		
 		cmd_vel_pub.publish(this->cmd_vel_twist);

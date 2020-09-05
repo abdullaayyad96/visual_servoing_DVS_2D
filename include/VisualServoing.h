@@ -139,6 +139,7 @@ private:
 	int false_tracking_thresh = 3;
 	double time_decay_factor = 0.1;
 	double corner_alpha = 0.15;
+	int tracking_zero_counter = 0;
 
 	cv::Mat corner_heatmap_cv = cv::Mat(180, 240, CV_64FC1);
     cv::Mat dilated_heatmap = cv::Mat(180, 240, CV_8UC1);
