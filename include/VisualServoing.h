@@ -56,6 +56,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/Bool.h>
+#include <std_srvs/SetBool.h>
 #include <sensor_msgs/Image.h>
 #include <ros/console.h>
 

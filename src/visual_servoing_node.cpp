@@ -36,7 +36,7 @@ static void Corner_tracking(visual_servoing_davis::Visual_Servoing* data_ccollec
 {
 	while (ros::ok())
 	{
-		data_ccollector->corner_detection();
+		//data_ccollector->corner_detection();
 	}   
 
 }
