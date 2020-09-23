@@ -5,17 +5,28 @@
  *      Author: user
  */
 
+
+#define myVSmode 1
+//false for frame, true for dvs
+
+
 #include "VisualServoing.h"
 namespace visual_servoing_davis
 {
 Visual_Servoing::Visual_Servoing() {
 
 	// Subscribers
-	davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
 	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 10, &Visual_Servoing::CamInfoCallback, this);
-	// frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
+	if (myVSmode)
+	{
+		davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
+	}
+	else
+	{
+		frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
+	}
 
 	//Pubishers
 	centroid_pub = pnh_.advertise<dvs_msgs::Event>("/object_center", 1);
@@ -133,15 +144,20 @@ void Visual_Servoing::frame_image_callback(const sensor_msgs::Image::ConstPtr &m
 {
 	this->img_bridge = *cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 	this->frame = this->img_bridge.image;
-
-	this->harrisCornerDetection(this->frame);
+	this->harrisCornerDetection(this->frame, msg->header.stamp);
 }
 
-void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame)
+void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame, ros::Time current_ts)
 {
 	cv::cornerHarris(input_frame, this->harris_frame_, this->block_size_, this->aperture_size_, this->k_);
 	//cv::normalize(this->harris_frame_, this->harris_frame_, 0, 255, cv::NORM_MINMAX, CV_32FC1, cv::Mat());
 	
+	dvs_msgs::EventArray packets_corner;
+	packets_corner.width = this->sensor_width_;
+	packets_corner.height = this->sensor_height_;
+
+	int num_corners = 0;
+
 	for( int i = 0; i < this->harris_frame_.rows ; i++ )
     {
         for( int j = 0; j < this->harris_frame_.cols; j++ )
@@ -150,11 +166,34 @@ void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame)
             {
 				C_e.x = j;
 				C_e.y = i;
-				C_e.ts = ros::Time::now();
+				C_e.ts = current_ts;
 				corner_queue.push(C_e);
+				packets_corner.events.push_back(C_e);
+				num_corners++;
             }
         }
     }
+	corner_events_pub.publish(packets_corner);
+	packets_corner.events.clear();
+
+	//NOTE: start commenting for dynamic tracking
+	if(num_corners==0 && (this->current_mode == robot_mode::tracking) && !myVSmode)
+	{
+		this->no_corner_switch_counter++;
+		if (this->no_corner_switch_counter >= this->no_corner_switch_thresh)
+		{
+			this->no_corner_switch_counter = 0;
+			std::cout << "no track" << std::endl;
+			this->cmd_vel_twist.linear.x = 0;
+			this->cmd_vel_twist.linear.y = 0;	
+			cmd_vel_pub.publish(this->cmd_vel_twist);
+			this->current_mode = robot_mode::detection;
+			this->detection_span = 2;
+			this->false_tracking_counter = 0;
+			ROS_INFO("Switch back to detection mode, %lld corners, %lld", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());	
+		}
+	}
+	//NOTE: start commenting for dynamic tracking
 }
 
 
@@ -215,6 +254,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	//this->random_initial_center.y = (int)(rand() % this->sensor_height_);
 	this->random_initial_center.x = (int)(this->sensor_width_/2);
 	this->random_initial_center.y = 0;//(int)(this->sensor_width_);
+	this->corner_heatmap_cv = cv::Mat(180, 240, CV_64FC1);
 }
 
 void Visual_Servoing::tracking_mode_callback(const std_msgs::Bool &msg)
@@ -245,6 +285,7 @@ void Visual_Servoing::corner_detection()
 		this->corner_queue.pop();
 		this->corner_heatmap_add_event(this->temp_e.y, 10, 15, this->temp_e.x, 10, 15);
 		this->corner_heatmap_time_update(this->temp_e.ts.toNSec()/1000000000);
+		// this->corner_heatmap_time_update(ros::Time::now().toNSec()/1000000000);
 
 		if (this->current_mode==robot_mode::detection || this->current_mode==robot_mode::idle || this->current_mode==robot_mode::rotate)
 		{
@@ -294,6 +335,7 @@ void Visual_Servoing::corner_detection()
 				object_center.y += this->corners.at<cv::Point>(i).y / this->corners.total();
 			}
 
+			//NOTE: start commenting for dynamic tracking
 			if ((ros::Time::now().toSec() - this->last_detection_time) > this->detection_correction_priod)
 			{
 				this->last_detection_time = ros::Time::now().toSec();
@@ -340,11 +382,12 @@ void Visual_Servoing::corner_detection()
 					this->detection_span = 2;
 					this->false_tracking_counter = 0;
 					ROS_INFO("Switch back to detection mode, %lld corners, %f error distance, %lld", (long long)this->corners.total(), (float)temp_tracking_err, (long long)ros::Time::now().toNSec());
-				}
+				}		
 			}
+			//NOTE: end commenting for dynamic tracking			
 		}
 		this->last_event_time = this->temp_e.ts.toNSec()/1000000000;
-	}
+	}	
 }
 
 void Visual_Servoing::ee_orientation()
@@ -445,14 +488,20 @@ void Visual_Servoing::ur_manipulation()
 		// 	this->cmd_vel_twist.linear.y = 0;
 		// }		
 		// cmd_vel_pub.publish(this->cmd_vel_twist);
-		this->orientation_angle.data = 0.1;
-		cmd_rotate_ee_pub_x.publish(this->orientation_angle);
-		std::this_thread::sleep_for(std::chrono::seconds(2));
-		this->orientation_angle.data = -0.1;
-		cmd_rotate_ee_pub_x.publish(this->orientation_angle);
-		std::this_thread::sleep_for(std::chrono::seconds(2));
+		if (myVSmode)
+		{
+			this->orientation_angle.data = 0.1;
+			cmd_rotate_ee_pub_x.publish(this->orientation_angle);
+			std::this_thread::sleep_for(std::chrono::seconds(2));
+			this->orientation_angle.data = -0.1;
+			cmd_rotate_ee_pub_x.publish(this->orientation_angle);
+			std::this_thread::sleep_for(std::chrono::seconds(2));
+		}
+		else
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+		}
 		std_msgs::Bool ur10_tracking_mode;
-		this->current_mode = robot_mode::pickup;
 		ur10_tracking_mode.data = true;				
 		ROS_INFO("Switch to tracking mode, %lld corners, %lld time", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());
 		this->tracking_mode_callback(ur10_tracking_mode);
@@ -465,7 +514,7 @@ void Visual_Servoing::ur_manipulation()
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= 10 * this->center_offset_threshold)
+		if (distance >= 1 * this->center_offset_threshold)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
@@ -483,11 +532,13 @@ void Visual_Servoing::ur_manipulation()
 			this->cmd_vel_twist.linear.y = 0;
 			this->tracking_zero_counter++;
 		}
+		//NOTE: start commenting for dynamic tracking
 		if(this->tracking_zero_counter > 50)
 		{
 			this->current_mode=robot_mode::rotate;
 			ROS_INFO("Switch to ee rotate mode:, %lld", (long long)ros::Time::now().toNSec());
 		}		
+		//NOTE: end commenting for dynamic tracking
 		cmd_vel_pub.publish(this->cmd_vel_twist);
 	}
 	else if (this->current_mode==robot_mode::rotate)
@@ -640,8 +691,10 @@ int Visual_Servoing::find_corner_association(dvs_msgs::Event new_event)
 	}
 		
 	if (this->calculate_gaussian_likelihood(min_distance, this->corners_var[min_distance_idx]) > this->likelihood_thresh)
+	{
 		return min_distance_idx;
-	
+	}	
+
 	return -1;
 }
 
@@ -651,6 +704,7 @@ void Visual_Servoing::update_corners(dvs_msgs::Event new_event)
 	if (association!=-1)
 	{
 		//update other corners with same movement but with higher variance
+		//NOTE: start commenting for dynamic tracking
 		for (int i=0 ; i<this->corners.total() ; i++)
 		{
 			if (i!=association)
@@ -660,6 +714,7 @@ void Visual_Servoing::update_corners(dvs_msgs::Event new_event)
 			this->corners_var[i] = (this->corners_var[i] * this->new_event_var) / (this->corners_var[association] + this->new_event_var);
 			}
 		}
+		//NOTE: end commenting for dynamic tracking
 		this->corners.at<cv::Point>(association).x  = (this->new_event_var * this->corners.at<cv::Point>(association).x + this->corners_var[association] * new_event.x) / (this->corners_var[association] + this->new_event_var);
 		this->corners.at<cv::Point>(association).y  = (this->new_event_var * this->corners.at<cv::Point>(association).y + this->corners_var[association] * new_event.y) / (this->corners_var[association] + this->new_event_var);
 		this->corners_var[association] = (this->corners_var[association] * this->new_event_var) / (this->corners_var[association] + this->new_event_var);	  

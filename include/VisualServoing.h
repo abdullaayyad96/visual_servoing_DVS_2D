@@ -100,7 +100,7 @@ public:
 
 	void corner_heatmap_add_event(int event_x, double x_var, int x_window, int event_y, double y_var, int y_window);
 	void corner_heatmap_time_update(double new_timestamp);
-	void harrisCornerDetection(cv::Mat input_frame);
+	void harrisCornerDetection(cv::Mat input_frame, ros::Time current_ts);
 	void contourDetection(cv::Mat input_frame);
 
 	int e_max, c_max;
@@ -225,6 +225,11 @@ private:
 	//dynamic config
 	dynamic_reconfigure::Server<visual_servoing_davis::VSCfgConfig> server_;
 	dynamic_reconfigure::Server<visual_servoing_davis::VSCfgConfig>::CallbackType f_;
+
+	//switch back to detection
+	int no_corner_switch_counter = 0;
+	int no_corner_switch_thresh = 1;
+
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */
