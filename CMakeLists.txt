@@ -37,7 +37,6 @@ generate_dynamic_reconfigure_options(
 
 
 include_directories( ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIR}  "${PROJECT_SOURCE_DIR}/include/")
-include_directories ("/home/abdulla/OneDrive/KU_research/codes/visual_servoing/src/rpg_dvs_ros/davis_ros_driver/include/")
 
 
 catkin_package(

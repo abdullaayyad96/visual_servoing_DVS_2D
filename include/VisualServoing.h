@@ -112,8 +112,8 @@ public:
 
 private:
 	Eigen::MatrixXd sae;
-	static const int sensor_width_ = 240;
-	static const int sensor_height_ = 180;
+	static const int sensor_width_ = 346;
+	static const int sensor_height_ = 260;
 	// Tuning parameters
   	uint64_t  timeSinceEpochMillisec();
 	typedef std::chrono::high_resolution_clock h_clock;
@@ -185,7 +185,7 @@ private:
 	ros::ServiceServer goal_service, sample_service, exp_reset_service;
 
 	//Subscriber and publisher and nodehandle
-	ros::Publisher corner_events_pub, processed_corner_pub, event_frames_pub, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_rotate_ee_pub_x, cmd_mode_pub; // Publish classified online events
+	ros::Publisher corner_events_pub, processed_corner_pub, event_frames_pub, centroid_pub, pub_heatmap, pub_corners_image, cmd_vel_pub, cmd_rotate_ee_pub, cmd_rotate_ee_pub_x, cmd_mode_pub, detection_status_pub; // Publish classified online events
 	ros::Subscriber davis_sub_; // Subscribe data from Davis
 	ros::Subscriber tracking_mode, detection_mode; // Subscribe data from Davis
 	ros::Subscriber frame_image_sub;

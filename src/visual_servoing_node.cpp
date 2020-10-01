@@ -68,17 +68,21 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "servoing");
 	ros::NodeHandle nh_;
-
+	ROS_INFO("start");
 
 	visual_servoing_davis::Visual_Servoing* processs;
+	ROS_INFO("1");
 	processs = new visual_servoing_davis::Visual_Servoing;
+	ROS_INFO("2");
 
 
 	// Threads
 
 	//std::thread th1(&publish_frame_millisec_desired, processs);
 	std::thread th1(&Corner_tracking, processs);
-	std::thread th3(&robot_EE_movement, processs); // only when controller used
+	ROS_INFO("3");
+	std::thread th3(&robot_EE_movement, processs); 
+	ROS_INFO("4");// only when controller used
 	std::thread th4(&publish_whole_data, processs); // only when controller used
 
 

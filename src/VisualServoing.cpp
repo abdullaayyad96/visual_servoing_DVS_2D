@@ -31,6 +31,7 @@ Visual_Servoing::Visual_Servoing() {
 	//Pubishers
 	centroid_pub = pnh_.advertise<dvs_msgs::Event>("/object_center", 1);
 	processed_corner_pub = pnh_.advertise<dvs_msgs::EventArray>("/object_corners", 1);
+	corner_events_pub =pnh_.advertise<dvs_msgs::EventArray>("/dvs_corner_events_soft", 1);
 	pub_heatmap =pnh_.advertise<sensor_msgs::Image>("/corner_heatmap", 1);
 	pub_corners_image =pnh_.advertise<sensor_msgs::Image>("/corners", 1);
 	event_frames_pub =pnh_.advertise<sensor_msgs::Image>("/event_frame", 1);
@@ -38,6 +39,8 @@ Visual_Servoing::Visual_Servoing() {
 	cmd_rotate_ee_pub = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee", 1);
 	cmd_rotate_ee_pub_x = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee_x", 1);
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
+	detection_status_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_status", 1);
+
 
 	this->f_ = boost::bind(&Visual_Servoing::parameter_callback, this, _1, _2);
 	this->server_.setCallback(this->f_);
@@ -80,6 +83,10 @@ void Visual_Servoing::parameter_callback(visual_servoing_davis::VSCfgConfig &con
 void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPtr &msg)
 {
 	// Packets definition
+	dvs_msgs::EventArray packets_corner;
+	packets_corner.header = msg->header;
+	packets_corner.width = msg->width;
+	packets_corner.height = msg->height;
 
 	// Create a frame from events
 	this->davis_frame = cv::Mat::zeros(this->sensor_height_, this->sensor_width_, CV_8UC3); 							// frame was declared in the header file
@@ -87,6 +94,11 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 	// Analysing callback packets
 	for (const auto e : msg->events)
 	{	
+		// Separating corner from the detector
+		if (this->corner_detector_.isCorner(e)) // corner
+		{
+			packets_corner.events.push_back(e);
+		}
 	 	this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
 	}
 
@@ -99,6 +111,9 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 	sensor_msgs::Image temp_ros_image;
 	this->createROSFrame(this->davis_frame, temp_ros_image);
 	event_frames_pub.publish(temp_ros_image);
+
+	corner_events_pub.publish(packets_corner);
+	packets_corner.events.clear();
 }
 
 void Visual_Servoing::createROSFrame(cv::Mat input_frame, sensor_msgs::Image &ros_image)
@@ -225,6 +240,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 		this->cmd_vel_twist.linear.x = 0;
 		this->cmd_vel_twist.linear.y = 0;	
 	  	cmd_vel_pub.publish(this->cmd_vel_twist);
+		ROS_INFO("Stop detection mode: %lld", (long long)ros::Time::now().toNSec());
 	}	
 	//this->random_initial_center.x = (int)(rand() % this->sensor_width_);
 	//this->random_initial_center.y = (int)(rand() % this->sensor_height_);
@@ -490,7 +506,7 @@ void Visual_Servoing::ur_manipulation()
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= 5 * this->center_offset_threshold)
+		if (distance >= 2 * this->center_offset_threshold)
 		{
 			this->cmd_vel_twist.linear.x = (this->contour_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->contour_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
@@ -519,9 +535,12 @@ void Visual_Servoing::ur_manipulation()
 			this->cmd_vel_twist.linear.y = 0;
 			cmd_vel_pub.publish(this->cmd_vel_twist);
 
-			std_srvs::SetBool done_msg;
-			done_msg.request.data = true;
-			ros::service::call("servoing_complete", done_msg);
+			std_msgs::Bool detection_status;
+			detection_status.data = true;
+			detection_status_pub.publish(detection_status);
+			// std_srvs::SetBool done_msg;
+			// done_msg.request.data = true;
+			// ros::service::call("servoing_complete", done_msg);
 		}		
 		cmd_vel_pub.publish(this->cmd_vel_twist);
 	}
