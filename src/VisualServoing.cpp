@@ -6,7 +6,12 @@
  */
 
 
+//TODO: change to cfg parameters
 #define myVSmode 1
+#define updateTracking 0
+#define publish_corners 0
+#define evaluate_corner_processing_time 0
+#define evaluate_corner_detection_time 0
 //false for frame, true for dvs
 
 
@@ -88,7 +93,9 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 
 	// Create a frame from events
 	this->davis_frame = cv::Mat::zeros(this->sensor_height_, this->sensor_width_, CV_8UC3); 							// frame was declared in the header file
-	
+
+	auto corner_processing_start_time = std::chrono::high_resolution_clock::now();
+
 	// Analysing callback packets
 	for (const auto e : msg->events)
 	{		
@@ -107,14 +114,28 @@ void Visual_Servoing::davis_feature_callback(const dvs_msgs::EventArray::ConstPt
 			// 	}
 			// }	
 			corner_queue.push(C_e);
-			packets_corner.events.push_back(e);
+			if (publish_corners)
+			{
+				packets_corner.events.push_back(e);
+			}
 		}
 
 	 	// this->davis_frame.at<cv::Vec3b>(e.y, e.x) = cv::Vec3b(255, 255, 255);								// Assigning white color @ element (e.y,e.x)
 	}
+	
+	if (evaluate_corner_processing_time)
+	{
+		auto corner_processing_end_time = std::chrono::high_resolution_clock::now();		
+      	auto elapsed_time_nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(corner_processing_end_time - corner_processing_start_time);
+		float event_processing_rate = msg->events.size() / (elapsed_time_nsecs.count() * 1e-9);
+		ROS_INFO("Event processing speed: %.0f e/s, %0.f nsec/e", event_processing_rate, 1e9/event_processing_rate);
+	}
 
-	corner_events_pub.publish(packets_corner);
-	packets_corner.events.clear();
+	if (publish_corners)
+	{
+		corner_events_pub.publish(packets_corner);
+		packets_corner.events.clear();
+	}
 
 
 // 	if (this->cam_initialized)
@@ -232,6 +253,12 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	std_msgs::Bool ur10_detection_mode;
 	ur10_detection_mode.data = msg.data;
 	cmd_mode_pub.publish(ur10_detection_mode);
+
+	//Set UR reference frame to davis frame
+	URX::desiredTCP srv;
+	srv.request.frame = "davis";
+	ros::service::call("set_TCP", srv);
+
 	this->detection_span = 1;
 	if (msg.data)
 	{
@@ -263,7 +290,9 @@ void Visual_Servoing::tracking_mode_callback(const std_msgs::Bool &msg)
 	{
 		this->current_mode = this->tracking;
 		for(int i=0 ; i < this->corners.total() ; i++)
+		{
 			this->corners_var[i] = this->corner_var_constant;
+		}
 	}
 	else
 	{
@@ -281,49 +310,62 @@ void Visual_Servoing::corner_detection()
 {
 	if (this->corner_queue.size() > 0)
 	{
+		auto corner_detection_start_time = std::chrono::high_resolution_clock::now();
 		this->temp_e = this->corner_queue.front();
 		this->corner_queue.pop();
-		this->corner_heatmap_add_event(this->temp_e.y, 10, 15, this->temp_e.x, 10, 15);
-		this->corner_heatmap_time_update(this->temp_e.ts.toNSec()/1000000000);
 		// this->corner_heatmap_time_update(ros::Time::now().toNSec()/1000000000);
 
 		if (this->current_mode==robot_mode::detection || this->current_mode==robot_mode::idle || this->current_mode==robot_mode::rotate)
 		{
-			cv::dilate(this->corner_heatmap_cv,  this->dilated_heatmap, this->dilate_kernel);
+			this->heatmap_corner_queue.push(this->temp_e);
 
-			cv::threshold(this->dilated_heatmap, this->upper_thresh_map, this->heatmap_thresh, 10.0, CV_THRESH_TOZERO);
-			cv::threshold(this->dilated_heatmap, this->lower_thresh_map, this->heatmap_thresh, 0.1, CV_THRESH_BINARY_INV);
-			this->dilated_heatmap = this->upper_thresh_map + this->lower_thresh_map;
-			
-			this->processed_heatmap = (this->dilated_heatmap == this->corner_heatmap_cv);
-
-			cv::findNonZero(this->processed_heatmap, this->corners);
-
-			//average corners for center
-			object_center.x = 0;
-			object_center.y = 0;
-			corners_var.clear();
-			for (int i = 0 ; i < this->corners.total() ; i++)
+			if (this->heatmap_corner_queue.size() > this->heatmap_queue_size)
 			{
-				object_center.x += this->corners.at<cv::Point>(i).x / this->corners.total();
-				object_center.y += this->corners.at<cv::Point>(i).y / this->corners.total();
-				corners_var.push_back( 1 / this->corner_heatmap_cv.at<double>(this->corners.at<cv::Point>(i).y, this->corners.at<cv::Point>(i).x));
-			}
-			
-			// if( (this->current_mode==robot_mode::detection) && (ros::Time::now().toSec() - this->first_detection_time) > this->detection_span)
-			// {
-			// 	std_msgs::Bool ur10_tracking_mode;
-			// 	ur10_tracking_mode.data = true;				
-			// 	this->tracking_mode_callback(ur10_tracking_mode);
+				while(this->heatmap_corner_queue.size() > 0)
+				{
+
+					this->corner_heatmap_add_event(this->heatmap_corner_queue.front().y, 10, 15, this->heatmap_corner_queue.front().x, 10, 15);
+					this->corner_heatmap_time_update(this->heatmap_corner_queue.front().ts.toNSec()/1000000000);
+					this->heatmap_corner_queue.pop();
+				}
 				
-			// 	ROS_INFO("Switch to tracking mode, %lld corners, %lld time", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());
-			// }
-			this->last_detection_time = ros::Time::now().toSec();
+
+				cv::dilate(this->corner_heatmap_cv,  this->dilated_heatmap, this->dilate_kernel);
+
+				cv::threshold(this->dilated_heatmap, this->upper_thresh_map, this->heatmap_thresh, 10.0, CV_THRESH_TOZERO);
+				cv::threshold(this->dilated_heatmap, this->lower_thresh_map, this->heatmap_thresh, 0.1, CV_THRESH_BINARY_INV);
+				this->dilated_heatmap = this->upper_thresh_map + this->lower_thresh_map;
+				
+				this->processed_heatmap = (this->dilated_heatmap == this->corner_heatmap_cv);
+
+				cv::findNonZero(this->processed_heatmap, this->corners);
+
+				//average corners for center
+				object_center.x = 0;
+				object_center.y = 0;
+				corners_var.clear();
+				for (int i = 0 ; i < this->corners.total() ; i++)
+				{
+					object_center.x += this->corners.at<cv::Point>(i).x / this->corners.total();
+					object_center.y += this->corners.at<cv::Point>(i).y / this->corners.total();
+					corners_var.push_back( 1 / this->corner_heatmap_cv.at<double>(this->corners.at<cv::Point>(i).y, this->corners.at<cv::Point>(i).x));
+				}
+				
+				// if( (this->current_mode==robot_mode::detection) && (ros::Time::now().toSec() - this->first_detection_time) > this->detection_span)
+				// {
+				// 	std_msgs::Bool ur10_tracking_mode;
+				// 	ur10_tracking_mode.data = true;				
+				// 	this->tracking_mode_callback(ur10_tracking_mode);
+					
+				// 	ROS_INFO("Switch to tracking mode, %lld corners, %lld time", (long long)this->corners.total(), (long long)ros::Time::now().toNSec());
+				// }
+				this->last_detection_time = ros::Time::now().toSec();
+			}
 		}
 
 		else if (this->current_mode==robot_mode::tracking)
 		{
-			this->update_corner_variance(this->temp_e.ts.toSec());
+			this->update_corner_variance(this->temp_e.ts.toSec()); 
 			this->update_corners(this->temp_e);
 			//average corners for center
 			object_center.x = 0;
@@ -335,58 +377,93 @@ void Visual_Servoing::corner_detection()
 				object_center.y += this->corners.at<cv::Point>(i).y / this->corners.total();
 			}
 
-			//NOTE: start commenting for dynamic tracking
-			if ((ros::Time::now().toSec() - this->last_detection_time) > this->detection_correction_priod)
+			if (updateTracking)
 			{
-				this->last_detection_time = ros::Time::now().toSec();
+				this->corner_heatmap_add_event(this->temp_e.y, 10, 15, this->temp_e.x, 10, 15);
+				this->corner_heatmap_time_update(this->temp_e.ts.toNSec()/1000000000);
 
-				cv::dilate(this->corner_heatmap_cv,  this->dilated_heatmap, this->dilate_kernel);
-
-				cv::threshold(this->dilated_heatmap, this->upper_thresh_map, this->heatmap_thresh, 10.0, CV_THRESH_TOZERO);
-				cv::threshold(this->dilated_heatmap, this->lower_thresh_map, this->heatmap_thresh, 0.1, CV_THRESH_BINARY_INV);
-				this->dilated_heatmap = this->upper_thresh_map + this->lower_thresh_map;
-				
-				this->processed_heatmap = (this->dilated_heatmap == this->corner_heatmap_cv);
-
-				cv::Mat temp_corners;
-				cv::findNonZero(this->processed_heatmap, temp_corners);
-
-				//average corners for center
-				double temp_object_center_x = 0;
-				double temp_object_center_y = 0;
-				for (int i = 0 ; i < temp_corners.total() ; i++)
+				if ((ros::Time::now().toSec() - this->last_detection_time) > this->detection_correction_priod)
 				{
-					temp_object_center_x += temp_corners.at<cv::Point>(i).x / temp_corners.total();
-					temp_object_center_y += temp_corners.at<cv::Point>(i).y / temp_corners.total();
+					this->last_detection_time = ros::Time::now().toSec();
+
+					cv::dilate(this->corner_heatmap_cv,  this->dilated_heatmap, this->dilate_kernel);
+
+					cv::threshold(this->dilated_heatmap, this->upper_thresh_map, this->heatmap_thresh, 10.0, CV_THRESH_TOZERO);
+					cv::threshold(this->dilated_heatmap, this->lower_thresh_map, this->heatmap_thresh, 0.1, CV_THRESH_BINARY_INV);
+					this->dilated_heatmap = this->upper_thresh_map + this->lower_thresh_map;
+					
+					this->processed_heatmap = (this->dilated_heatmap == this->corner_heatmap_cv);
+
+					cv::Mat temp_corners;
+					cv::findNonZero(this->processed_heatmap, temp_corners);
+
+					//average corners for center
+					double temp_object_center_x = 0;
+					double temp_object_center_y = 0;
+					for (int i = 0 ; i < temp_corners.total() ; i++)
+					{
+						temp_object_center_x += temp_corners.at<cv::Point>(i).x / temp_corners.total();
+						temp_object_center_y += temp_corners.at<cv::Point>(i).y / temp_corners.total();
+					}
+
+					double temp_tracking_err =std::sqrt(std::pow(this->object_center.x - temp_object_center_x, 2) + std::pow(this->object_center.y - temp_object_center_y, 2));
+
+					if (temp_tracking_err > this->tracking_err_thresh)
+					{
+						this->false_tracking_counter++;
+						ROS_INFO("False tracking counter: %lld", this->false_tracking_counter);
+					}
+					else
+					{
+						this->false_tracking_counter = 0;
+					}
+					
+
+					if (this->false_tracking_counter >= this->false_tracking_thresh)
+					{
+						this->cmd_vel_twist.linear.x = 0;
+						this->cmd_vel_twist.linear.y = 0;	
+						cmd_vel_pub.publish(this->cmd_vel_twist);
+						this->current_mode = robot_mode::detection;
+						this->detection_span = 2;
+						this->false_tracking_counter = 0;
+						ROS_INFO("Switch back to detection mode, %lld corners, %f error distance, %lld", (long long)this->corners.total(), (float)temp_tracking_err, (long long)ros::Time::now().toNSec());
+					}		
 				}
-
-				double temp_tracking_err =std::sqrt(std::pow(this->object_center.x - temp_object_center_x, 2) + std::pow(this->object_center.y - temp_object_center_y, 2));
-
-				if (temp_tracking_err > this->tracking_err_thresh)
-				{
-					this->false_tracking_counter++;
-					ROS_INFO("False tracking counter: %lld", this->false_tracking_counter);
-				}
-				else
-				{
-					this->false_tracking_counter = 0;
-				}
-				
-
-				if (this->false_tracking_counter >= this->false_tracking_thresh)
-				{
-					this->cmd_vel_twist.linear.x = 0;
-					this->cmd_vel_twist.linear.y = 0;	
-					cmd_vel_pub.publish(this->cmd_vel_twist);
-					this->current_mode = robot_mode::detection;
-					this->detection_span = 2;
-					this->false_tracking_counter = 0;
-					ROS_INFO("Switch back to detection mode, %lld corners, %f error distance, %lld", (long long)this->corners.total(), (float)temp_tracking_err, (long long)ros::Time::now().toNSec());
-				}		
 			}
 			//NOTE: end commenting for dynamic tracking			
 		}
 		this->last_event_time = this->temp_e.ts.toNSec()/1000000000;
+		// this->last_event_time =  ros::Time::now().toNSec()/1000000000;
+
+
+		if (evaluate_corner_detection_time)
+		{
+			auto corner_detection_end_time = std::chrono::high_resolution_clock::now();
+      		auto elapsed_time_nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(corner_detection_end_time - corner_detection_start_time);
+
+			if (this->current_mode==robot_mode::tracking)
+			{
+				this->tracking_procerssing_time = (this->tracking_processing_N * this->tracking_procerssing_time + elapsed_time_nsecs.count() * 1e-9) / (this->tracking_processing_N + 1);
+				this->tracking_processing_N++;
+				if (this->tracking_processing_N % this->heatmap_queue_size == 0)
+				{
+					this->tracking_processing_N = 0;		
+					ROS_INFO("Event tracking corner processing time speed: %.0f nsecs", this->tracking_procerssing_time * 1e9);
+				}
+			}
+			else
+			{
+				this->detection_procerssing_time = (this->detection_processing_N * this->detection_procerssing_time + elapsed_time_nsecs.count() * 1e-9) / (this->detection_processing_N + 1);
+				this->detection_processing_N++;
+				if (this->detection_processing_N % this->heatmap_queue_size == 0)
+				{
+					this->detection_processing_N = 0;
+					ROS_INFO("Event detection corner processing time speed: %.0f nsecs", this->detection_procerssing_time * 1e9);
+				}
+			}
+			
+		}		
 	}	
 }
 
@@ -514,7 +591,7 @@ void Visual_Servoing::ur_manipulation()
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= 1 * this->center_offset_threshold)
+		if (distance >= 10 * this->center_offset_threshold)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
@@ -665,7 +742,9 @@ void Visual_Servoing::update_corner_variance(double new_timestamp)
 		this->corners_var[i] = this->corner_var_constant;
 		//this->corners_var[i] += this->timestamp_update_var * (new_timestamp - this->last_event_time);
 		if (this->corners_var[i] > this->corner_var_constant)
-		this->corners_var[i] = this->corner_var_constant;
+		{
+			this->corners_var[i] = this->corner_var_constant;
+		}
 	}
 }
 

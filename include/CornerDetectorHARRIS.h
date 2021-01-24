@@ -17,6 +17,7 @@
 
 #include "harris_local_event_queues.h"
 #include "harris_distinct_queue.h"
+#include <chrono>
 
 namespace visual_servoing_davis
 {

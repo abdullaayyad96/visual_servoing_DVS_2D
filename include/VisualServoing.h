@@ -67,6 +67,7 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <visual_servoing_davis/VSCfgConfig.h>
+#include "URX/desiredTCP.h"
 
 
 namespace visual_servoing_davis
@@ -150,6 +151,8 @@ private:
 	double heatmap_thresh = 0.6;
     cv::Mat upper_thresh_map = cv::Mat(180, 240, CV_8UC1);
     cv::Mat lower_thresh_map = cv::Mat(180, 240, CV_8UC1);
+	int heatmap_queue_size = 20;
+	std::queue<dvs_msgs::Event> heatmap_corner_queue; 
 
 	//for visualization with ROS
     cv::Mat corner_heatmap_cv_mono8 = cv::Mat(180, 240, CV_8UC1);
@@ -230,6 +233,9 @@ private:
 	int no_corner_switch_counter = 0;
 	int no_corner_switch_thresh = 1;
 
+	//processing time evaluation
+	float detection_procerssing_time, tracking_procerssing_time = 0;
+	int detection_processing_N, tracking_processing_N = 0;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

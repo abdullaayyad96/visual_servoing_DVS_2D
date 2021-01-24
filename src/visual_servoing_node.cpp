@@ -56,7 +56,7 @@ static void publish_whole_data(visual_servoing_davis::Visual_Servoing* data_ccol
 {
 	while (ros::ok())
 	{
-		std::this_thread::sleep_for(std::chrono::microseconds(100000)); // Sampling
+		std::this_thread::sleep_for(std::chrono::microseconds(20000)); // Sampling
 
 		data_ccollector->publish_data();
 	}
@@ -80,8 +80,7 @@ int main(int argc, char **argv)
 	std::thread th1(&Corner_tracking, processs);
 	std::thread th3(&robot_EE_movement, processs); // only when controller used
 	std::thread th4(&publish_whole_data, processs); // only when controller used
-
-
+	
 	ros::spin();
 
 	delete processs;
