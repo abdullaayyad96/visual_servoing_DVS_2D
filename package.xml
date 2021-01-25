@@ -94,6 +94,8 @@
   <build_depend>image_transport</build_depend>
   <build_depend>opencv-3.3.0</build_depend>
   <build_depend>baxter_core_msgs</build_depend>
+  <build_depend>URX</build_depend>
+  <run_depend>URX</run_depend>
   <run_depend>baxter_gripper_server</run_depend>
   <run_depend>baxter_core_msgs</run_depend>
   <run_depend>baxter_core_msgs</run_depend>

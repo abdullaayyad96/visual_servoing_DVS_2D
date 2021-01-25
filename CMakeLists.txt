@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   dvs_msgs
   geometry_msgs
   cv_bridge
+  URX
 )
  
 

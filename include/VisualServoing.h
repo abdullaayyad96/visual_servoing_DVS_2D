@@ -43,6 +43,7 @@
 #include <tuple>
 #include <iostream>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <sys/time.h>
 #include <queue>
@@ -236,6 +237,13 @@ private:
 	//processing time evaluation
 	float detection_procerssing_time, tracking_procerssing_time = 0;
 	int detection_processing_N, tracking_processing_N = 0;
+
+	//depth scaling
+	float depth;
+	float item_height = -0.1;
+	
+	//output_cmd 
+	float ref_pixel_vel = 0;
 };
 }
 #endif /* VISUAL_SERVO_DAVIS_SRC_VISUALSERVOING_H_ */

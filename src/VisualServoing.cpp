@@ -254,6 +254,11 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	ur10_detection_mode.data = msg.data;
 	cmd_mode_pub.publish(ur10_detection_mode);
 
+	//read depth
+	boost::shared_ptr<geometry_msgs::PoseStamped const> cam_pose;
+	cam_pose = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/dvs/pose");
+	this->depth = cam_pose->pose.position.z - this->item_height;
+
 	//Set UR reference frame to davis frame
 	URX::desiredTCP srv;
 	srv.request.frame = "davis";
@@ -586,21 +591,28 @@ void Visual_Servoing::ur_manipulation()
 	else if (this->current_mode==robot_mode::tracking)
 	{
 		double distance = std::sqrt(std::pow(this->object_center.x - (((double)this->sensor_width_)/2.0),2) + std::pow(this->object_center.y - (((double)this->sensor_height_)/2.0),2));
-		double target_velocity = this->k_p * distance;
+		this->ref_pixel_vel = this->k_p * distance;
+		double target_velocity = this->ref_pixel_vel * this->depth / this->cam_.fx();
 		if (target_velocity > this->velocity)
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= 10 * this->center_offset_threshold)
+		if (distance >= 8 * this->center_offset_threshold)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
 			this->tracking_zero_counter = 0;
 		}
+		else if (distance >= 5 * this->center_offset_threshold)
+		{
+			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (2*distance);
+			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (2*distance);
+			this->tracking_zero_counter = 0;
+		}
 		else if (distance >= this->center_offset_threshold)
 		{
-			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (3*distance);
-			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (3*distance);
+			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (6*distance);
+			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (6*distance);
 			this->tracking_zero_counter = 0;
 		}
 		else
