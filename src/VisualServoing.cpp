@@ -287,7 +287,7 @@ void Visual_Servoing::detection_mode_callback(const std_msgs::Bool &msg)
 	//this->random_initial_center.y = (int)(rand() % this->sensor_height_);
 	this->random_initial_center.x = (int)(this->sensor_width_/2);
 	this->random_initial_center.y = 0;//(int)(this->sensor_width_);
-	this->corner_heatmap_cv = cv::Mat(180, 240, CV_64FC1);
+	this->corner_heatmap_cv = cv::Mat(260, 346, CV_64FC1);
 }
 
 void Visual_Servoing::tracking_mode_callback(const std_msgs::Bool &msg)
@@ -667,7 +667,7 @@ void Visual_Servoing::publish_data()
 	}
 	this->corner_heatmap_cv_mono8.at<uint8_t>(this->object_center.y, this->object_center.x) = 255;
 
-	cv::Mat colored_SACE_SAVE = cv::Mat(180, 240, CV_8UC3);
+	cv::Mat colored_SACE_SAVE = cv::Mat(260, 346, CV_8UC3);
 
 	cv::cvtColor(this->corner_heatmap_cv_mono8, colored_SACE_SAVE, cv::COLOR_GRAY2RGB);
 	cv::Vec3b color = cv::Vec3b(135, 206, 255);

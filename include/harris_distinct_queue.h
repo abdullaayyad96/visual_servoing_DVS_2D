@@ -27,8 +27,8 @@ private:
   int getIndex(int x, int y, bool polarity) const;
 
   // constants
-  static const int sensor_width_ = 240;
-  static const int sensor_height_ = 180;
+  static const int sensor_width_ = 346;
+  static const int sensor_height_ = 260;
 };
 
 } // namespace

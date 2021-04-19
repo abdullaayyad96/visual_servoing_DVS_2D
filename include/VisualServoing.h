@@ -116,8 +116,8 @@ public:
 
 private:
 	Eigen::MatrixXd sae;
-	static const int sensor_width_ = 240;
-	static const int sensor_height_ = 180;
+	static const int sensor_width_ = 346;
+	static const int sensor_height_ = 260;
 	// Tuning parameters
   	uint64_t  timeSinceEpochMillisec();
 	typedef std::chrono::high_resolution_clock h_clock;
@@ -146,20 +146,20 @@ private:
 	double corner_alpha = 0.15;
 	int tracking_zero_counter = 0;
 
-	cv::Mat corner_heatmap_cv = cv::Mat(180, 240, CV_64FC1);
-    cv::Mat dilated_heatmap = cv::Mat(180, 240, CV_8UC1);
+	cv::Mat corner_heatmap_cv = cv::Mat(260, 346, CV_64FC1);
+    cv::Mat dilated_heatmap = cv::Mat(260, 346, CV_8UC1);
 	cv::Mat dilate_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(25, 25));
-    cv::Mat processed_heatmap = cv::Mat::zeros(180, 240, CV_8UC1);
+    cv::Mat processed_heatmap = cv::Mat::zeros(260, 346, CV_8UC1);
 	cv::Mat frame;
 	
 	double heatmap_thresh = 0.6;
-    cv::Mat upper_thresh_map = cv::Mat(180, 240, CV_8UC1);
-    cv::Mat lower_thresh_map = cv::Mat(180, 240, CV_8UC1);
+    cv::Mat upper_thresh_map = cv::Mat(260, 346, CV_8UC1);
+    cv::Mat lower_thresh_map = cv::Mat(260, 346, CV_8UC1);
 	int heatmap_queue_size = 20;
 	std::queue<dvs_msgs::Event> heatmap_corner_queue; 
 
 	//for visualization with ROS
-    cv::Mat corner_heatmap_cv_mono8 = cv::Mat(180, 240, CV_8UC1);
+    cv::Mat corner_heatmap_cv_mono8 = cv::Mat(260, 346, CV_8UC1);
 	sensor_msgs::Image corner_heatmap_image, SAVE_image;
 	cv_bridge::CvImage img_bridge;
 

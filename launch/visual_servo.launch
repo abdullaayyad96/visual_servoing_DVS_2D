@@ -26,9 +26,9 @@
   </node>
 
 
-  <!--DAVIS240-->
+  <!--DAVIS346-->
   <!-- <rosparam file="$(find davis_ros_driver)/config/ARIC_VS.yaml" /> --> 
-  <!--DAVIS240-->
+  <!--DAVIS346-->
   <rosparam command="load" file="$(find davis_ros_driver)/config/ARIC_machining_exp.yaml" />
 
   <!-- feature detector -->

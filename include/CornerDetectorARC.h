@@ -34,8 +34,8 @@ private:
 
   // Parameters
   constexpr static const double filter_threshold_ = 0.050;
-  static const int kSensorWidth_ = 240;
-  static const int kSensorHeight_= 180;
+  static const int kSensorWidth_ = 346;
+  static const int kSensorHeight_= 260;
 
   // Surface of Active Events
   Eigen::MatrixXd sae_[2];
