@@ -61,6 +61,9 @@
 #include <ros/console.h>
 
 #include <CornerDetectorHARRIS.h>
+#include <CornerDetectorARC.h>
+#include <CornerDetectorFAST.h>
+#include <CornerDetectorFAHarris.h>
 #include <image_geometry/pinhole_camera_model.h>
 
 #include <stddef.h>
@@ -180,6 +183,8 @@ private:
 
 	//variables for UR manipulation
 	double velocity = 0.1;
+	double tracking_region_1_thresh = 25;
+	double tracking_region_2_thresh = 15;
 	double center_offset_threshold = 2;
 	geometry_msgs::Twist cmd_vel_twist;
 	std_msgs::Float64 orientation_angle;

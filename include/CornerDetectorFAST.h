@@ -14,7 +14,7 @@
 
 #include <ros/ros.h>
 #include <dvs_msgs/EventArray.h>
-#include "davisdataprocessing.h"
+
 
 
 namespace visual_servoing_davis
@@ -25,7 +25,7 @@ public:
 	virtual ~CornerDetector_Fast();
 //	 bool isNoise (const dvs_msgs::Event &e);
 //	 bool isEdge (const dvs_msgs::Event &e);
-    bool isCornerFAST (const dvs_msgs::Event &e);
+    bool isCorner(const dvs_msgs::Event &e);
 //    bool isCorner_Edge_HARRISi (const dvs_msgs::Event &e);
 //    bool isCornerARC (const dvs_msgs::Event &e);
 

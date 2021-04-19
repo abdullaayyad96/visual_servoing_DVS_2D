@@ -8,7 +8,7 @@
 #include "CornerDetectorFAST.h"
 namespace visual_servoing_davis
 {
-CornerDetector_Fast::CornerDetector_Fast(),
+CornerDetector_Fast::CornerDetector_Fast():
 		 circle3_ {{0, 3}, {1, 3}, {2, 2}, {3, 1},
 		            {3, 0}, {3, -1}, {2, -2}, {1, -3},
 		            {0, -3}, {-1, -3}, {-2, -2}, {-3, -1},
@@ -34,7 +34,7 @@ CornerDetector_Fast::CornerDetector_Fast(),
 	// TODO Auto-generated destructor stub
 }
 
-bool CornerDetector_Fast::isCornerFAST(const dvs_msgs::Event &e)
+bool CornerDetector_Fast::isCorner(const dvs_msgs::Event &e)
 {
 	   // update SAE
   const int pol = e.polarity ? 1 : 0;

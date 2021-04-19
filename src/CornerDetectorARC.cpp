@@ -11,7 +11,7 @@
 namespace visual_servoing_davis
 {
 
-CornerDetector_ARC::CornerDetector_ARC(),
+CornerDetector_ARC::CornerDetector_ARC():
 kSmallCircle_{{0, 3}, {1, 3}, {2, 2}, {3, 1},
           {3, 0}, {3, -1}, {2, -2}, {1, -3},
           {0, -3}, {-1, -3}, {-2, -2}, {-3, -1},
@@ -35,7 +35,7 @@ CornerDetector_ARC::~CornerDetector_ARC() {
 }
 
 
-bool CornerDetector_ARC::isCornerARC(const dvs_msgs::Event &e) {
+bool CornerDetector_ARC::isCorner(const dvs_msgs::Event &e) {
     // Update Surface of Active Events
 	double et =e.ts.toSec();
 	int ex =e.x;

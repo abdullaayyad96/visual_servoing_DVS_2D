@@ -37,7 +37,7 @@ namespace visual_servoing_davis
 
 		private:
 			HarrisLocalEventQueues* queues_;
-			ros::NodeHandle pnh_;
+			// ros::NodeHandle pnh_;
 
 			Eigen::MatrixXd Gkernel, Sob_G_x, sob_x; // Guassian Kernel, sobel opertor
 			

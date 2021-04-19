@@ -13,7 +13,7 @@
 
 #include <ros/ros.h>
 #include <dvs_msgs/EventArray.h>
-#include "davisdataprocessing.h"
+
 
 
 namespace visual_servoing_davis
@@ -22,11 +22,11 @@ class CornerDetector_ARC{
 public:
 	CornerDetector_ARC();
 	virtual ~CornerDetector_ARC();
-    bool isCornerARC (const dvs_msgs::Event &e);
+    bool isCorner (const dvs_msgs::Event &e);
 //    bool isCornerFAST (const dvs_msgs::Event &e);
 //    bool isCorner_Edge_HARRISi (const dvs_msgs::Event &e);
 private:
-    ros::NodeHandle pnh_;
+    // ros::NodeHandle pnh_;
 
   // Circular Breshenham Masks
   const int kSmallCircle_[16][2];

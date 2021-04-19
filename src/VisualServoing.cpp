@@ -9,7 +9,7 @@
 //TODO: change to cfg parameters
 #define myVSmode 1
 #define updateTracking 0
-#define publish_corners 0
+#define publish_corners 1
 #define evaluate_corner_processing_time 0
 #define evaluate_corner_detection_time 0
 //false for frame, true for dvs
@@ -23,14 +23,14 @@ Visual_Servoing::Visual_Servoing() {
 	// Subscribers
 	tracking_mode = pnh_.subscribe("/tracking_mode", 0, &Visual_Servoing::tracking_mode_callback, this);
 	detection_mode = pnh_.subscribe("/detection_mode", 0, &Visual_Servoing::detection_mode_callback, this);
-	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 10, &Visual_Servoing::CamInfoCallback, this);
+	cam_info_subs_ = pnh_.subscribe("dvs/camera_info", 1, &Visual_Servoing::CamInfoCallback, this);
 	if (myVSmode)
 	{
-		davis_sub_ = pnh_.subscribe("/dvs/events", 2, &Visual_Servoing::davis_feature_callback, this);
+		davis_sub_ = pnh_.subscribe("/dvs/events", 1, &Visual_Servoing::davis_feature_callback, this);
 	}
 	else
 	{
-		frame_image_sub = pnh_.subscribe("/dvs/image_raw", 2, &Visual_Servoing::frame_image_callback, this);
+		frame_image_sub = pnh_.subscribe("/dvs/image_raw", 1, &Visual_Servoing::frame_image_callback, this);
 	}
 
 	//Pubishers
@@ -40,7 +40,7 @@ Visual_Servoing::Visual_Servoing() {
 	pub_heatmap =pnh_.advertise<sensor_msgs::Image>("/corner_heatmap", 1);
 	pub_corners_image =pnh_.advertise<sensor_msgs::Image>("/corners", 1);
 	event_frames_pub =pnh_.advertise<sensor_msgs::Image>("/event_frame", 1);
-	cmd_vel_pub = pnh_.advertise<geometry_msgs::Twist>("/ur_cmd_vel", 2);
+	cmd_vel_pub = pnh_.advertise<geometry_msgs::Twist>("/ur_cmd_vel", 1);
 	cmd_rotate_ee_pub = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee", 1);
 	cmd_rotate_ee_pub_x = pnh_.advertise<std_msgs::Float64>("/ur_rotate_ee_x", 1);
 	cmd_mode_pub = pnh_.advertise<std_msgs::Bool>("/ur_detection_mode", 1);
@@ -69,6 +69,8 @@ void Visual_Servoing::parameter_callback(visual_servoing_davis::VSCfgConfig &con
 	this->block_size_ = config.Harris_block_size;
 	this->aperture_size_ = config.Harris_aperture_size;
 	this->velocity = config.target_velocity;
+	this->tracking_region_1_thresh = config.tracking_region_1_thresh;
+	this->tracking_region_2_thresh = config.tracking_region_2_thresh;
 	this->center_offset_threshold = config.center_offset_threshold;
 	this->time_decay_factor = config.heatmap_time_decay_factor;
 	this->corner_alpha = config.heatmap_corner_weight;
@@ -204,7 +206,6 @@ void Visual_Servoing::harrisCornerDetection(cv::Mat input_frame, ros::Time curre
 		if (this->no_corner_switch_counter >= this->no_corner_switch_thresh)
 		{
 			this->no_corner_switch_counter = 0;
-			std::cout << "no track" << std::endl;
 			this->cmd_vel_twist.linear.x = 0;
 			this->cmd_vel_twist.linear.y = 0;	
 			cmd_vel_pub.publish(this->cmd_vel_twist);
@@ -438,8 +439,8 @@ void Visual_Servoing::corner_detection()
 			}
 			//NOTE: end commenting for dynamic tracking			
 		}
-		this->last_event_time = this->temp_e.ts.toNSec()/1000000000;
 		// this->last_event_time =  ros::Time::now().toNSec()/1000000000;
+		this->last_event_time = this->temp_e.ts.toNSec()/1000000000;
 
 
 		if (evaluate_corner_detection_time)
@@ -574,14 +575,14 @@ void Visual_Servoing::ur_manipulation()
 		{
 			this->orientation_angle.data = 0.1;
 			cmd_rotate_ee_pub_x.publish(this->orientation_angle);
-			std::this_thread::sleep_for(std::chrono::seconds(2));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			this->orientation_angle.data = -0.1;
 			cmd_rotate_ee_pub_x.publish(this->orientation_angle);
-			std::this_thread::sleep_for(std::chrono::seconds(2));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 		else
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(3));
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 		std_msgs::Bool ur10_tracking_mode;
 		ur10_tracking_mode.data = true;				
@@ -591,41 +592,43 @@ void Visual_Servoing::ur_manipulation()
 	else if (this->current_mode==robot_mode::tracking)
 	{
 		double distance = std::sqrt(std::pow(this->object_center.x - (((double)this->sensor_width_)/2.0),2) + std::pow(this->object_center.y - (((double)this->sensor_height_)/2.0),2));
-		this->ref_pixel_vel = this->k_p * distance;
-		double target_velocity = this->ref_pixel_vel * this->depth / this->cam_.fx();
+		this->ref_pixel_vel = this->depth / this->cam_.fx();
+		double target_velocity = this->ref_pixel_vel * this->k_p * distance;
 		if (target_velocity > this->velocity)
 		{
 			target_velocity = this->velocity;
 		}
-		if (distance >= 8 * this->center_offset_threshold)
+		if (distance >= tracking_region_1_thresh)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / distance;
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / distance;
 			this->tracking_zero_counter = 0;
 		}
-		else if (distance >= 5 * this->center_offset_threshold)
-		{
-			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (2*distance);
-			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (2*distance);
-			this->tracking_zero_counter = 0;
-		}
-		else if (distance >= this->center_offset_threshold)
+		else if (distance >= tracking_region_2_thresh)
 		{
 			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (6*distance);
 			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (6*distance);
 			this->tracking_zero_counter = 0;
 		}
+		else if (distance >= this->center_offset_threshold)
+		{
+			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (12*distance);
+			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (12*distance);
+			this->tracking_zero_counter = 0;
+		}
 		else
 		{
-			this->cmd_vel_twist.linear.x = 0;
-			this->cmd_vel_twist.linear.y = 0;
+			this->cmd_vel_twist.linear.x = (this->object_center.x - (((double)this->sensor_width_)/2.0)) * target_velocity / (12*distance);
+			this->cmd_vel_twist.linear.y = (this->object_center.y - (((double)this->sensor_height_)/2.0)) * target_velocity / (12*distance);
 			this->tracking_zero_counter++;
 		}
 		//NOTE: start commenting for dynamic tracking
-		if(this->tracking_zero_counter > 50)
+		if(this->tracking_zero_counter > 30)
 		{
 			this->current_mode=robot_mode::rotate;
 			ROS_INFO("Switch to ee rotate mode:, %lld", (long long)ros::Time::now().toNSec());
+			this->cmd_vel_twist.linear.x = 0;
+			this->cmd_vel_twist.linear.y = 0;
 		}		
 		//NOTE: end commenting for dynamic tracking
 		cmd_vel_pub.publish(this->cmd_vel_twist);
@@ -634,7 +637,6 @@ void Visual_Servoing::ur_manipulation()
 	{
 		this->ee_orientation();
 		cmd_rotate_ee_pub.publish(this->orientation_angle);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
 		this->current_mode = robot_mode::pickup;
 		ROS_INFO("Switch to grasp mode:, %lld", (long long)ros::Time::now().toNSec());
 	}	  
@@ -742,7 +744,7 @@ void Visual_Servoing::corner_heatmap_add_event(int event_x, double x_var, int x_
 
 void Visual_Servoing::corner_heatmap_time_update(double new_timestamp)
 {
-	this->corner_heatmap_cv = exp(-this->time_decay_factor * (new_timestamp - this->last_event_time)) * this->corner_heatmap_cv;
+	this->corner_heatmap_cv = exp(-this->time_decay_factor * (new_timestamp - this->last_detection_time)) * this->corner_heatmap_cv;
 }
 
 void Visual_Servoing::update_corner_variance(double new_timestamp)

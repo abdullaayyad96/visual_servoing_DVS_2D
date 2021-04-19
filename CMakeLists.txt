@@ -125,10 +125,15 @@ include_directories(${actionlib_INCLUDE_DIRS})
 ## Build ##
 ###########
 
-
-add_executable(visual_servoing_node src/visual_servoing_node.cpp src/VisualServoing.cpp src/CornerDetectorHARRIS.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
+add_executable(visual_servoing_node src/visual_servoing_node.cpp src/VisualServoing.cpp src/CornerDetectorHARRIS.cpp src/CornerDetectorFAHarris.cpp src/CornerDetectorFAST.cpp src/CornerDetectorARC.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
 target_link_libraries(visual_servoing_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
 add_dependencies(visual_servoing_node ${catkin_LIBRARIES}  ${visual_servoing_davis} ${PROJECT_NAME}_gencfg)
+
+
+add_executable(event_processing_node src/processing_rate_evaluation.cpp src/CornerDetectorHARRIS.cpp src/CornerDetectorFAHarris.cpp src/CornerDetectorFAST.cpp src/CornerDetectorARC.cpp src/harris_fixed_distinct_queue.cpp src/harris_distinct_queue.cpp)
+target_link_libraries(event_processing_node ${catkin_LIBRARIES} ${Eigen_LIBRARIES} ${OpenCV_LIBRARIES}) 
+add_dependencies(event_processing_node ${catkin_LIBRARIES}  ${visual_servoing_davis} ${PROJECT_NAME}_gencfg)
+
 
 
 # Print some message showing some of them
